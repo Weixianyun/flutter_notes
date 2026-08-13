@@ -67,11 +67,6 @@ ea6bfe8 chore: initial Flutter project setup
 fb700d5 docs: add bilingual README with Chinese-English toggle
 ```
 
-### 明日计划 (Week 1 Day 1)
-- Dart 语言基础复习 (类型系统、空安全、异步)
-- 搭建应用骨架: 路由配置、主题系统
-- 创建笔记列表页面 UI 原型
-
 ## 2026-08-13 | 遗留事项完成
 
 ### 今日完成
@@ -91,7 +86,64 @@ fb700d5 docs: add bilingual README with Chinese-English toggle
 3b82761 docs: mark TraeCode Flutter plugin and GitHub OAuth App as completed
 ```
 
-### 明日计划 (Week 1 Day 1)
-- Dart 语言基础复习 (类型系统、空安全、异步)
-- 搭建应用骨架: 路由配置、主题系统
-- 创建笔记列表页面 UI 原型
+## 2026-08-13 | Week 1 Day 1 — Dart 基础 + 应用骨架 + 笔记列表 UI
+
+### 今日完成
+
+#### 1. Dart 语言基础复习
+- 创建 `docs/dart-basics.md` 学习笔记，涵盖：
+  - 类型系统：强类型、类型推断、final/const 区别、泛型、Record（Dart 3）、Pattern Matching
+  - 空安全：健全空安全规则、`?` `!` `??` `?.` `??=` 操作符、流程提升、`late` 关键字
+  - 异步编程：Future、Stream、async/await、async*/sync* 生成器、错误处理、Future 常用方法、Zone
+  - 结合本项目实践要点（模型类空安全、JSON 解析、UI 条件渲染）
+
+#### 2. 应用骨架搭建
+
+##### 主题系统 (`lib/core/theme/`)
+- `app_colors.dart`: 定义种子色、明暗主题色板、功能色、笔记优先级标签色
+- `app_theme.dart`: 基于 `ColorScheme.fromSeed` 生成 Material 3 主题，定制 AppBar、Card、ListTile、FAB、输入框、分隔线、导航栏样式
+
+##### 路由配置 (`lib/core/router/`)
+- `app_router.dart`: 命名路由表（home/editor/search/settings），`onGenerateRoute` 支持未知路由兜底，占位页面为后续功能预留
+
+##### 入口集成
+- 更新 `app.dart`: 集成 `AppTheme.light/dark` + `AppRouter`，移除硬编码主题和 home 页面
+
+#### 3. 笔记列表页 UI 原型
+
+##### 数据模型 (`lib/data/models/`)
+- `note_model.dart`: `NoteModel` 数据类（id/title/content/priority/status/tags/createdAt/updatedAt）
+  - `NotePriority` 和 `NoteStatus` 枚举
+  - `fromJson`/`toJson`/`copyWith`/`excerpt`/`isEmpty` 方法
+  - `==`/`hashCode` 基于 id 重写
+
+##### 笔记列表页面 (`lib/features/notes/pages/`)
+- `notes_list_page.dart`: 首页列表，包含：
+  - AppBar 搜索/更多入口
+  - ListView + NoteCard 卡片列表
+  - Dismissible 滑动删除（带撤销 SnackBar）
+  - 长按弹出操作菜单（复制/分享/归档/删除）
+  - FloatingActionButton 新建笔记
+  - 空状态展示（EmptyState 组件）
+  - 6 条 Mock 数据（涵盖各优先级和标签）
+
+##### 复用组件 (`lib/features/notes/widgets/` + `lib/shared/widgets/`)
+- `note_card.dart`: 笔记卡片（标题、摘要、优先级指示点、标签芯片、更新时间）
+- `empty_state.dart`: 通用空状态组件（图标、标题、副标题、操作按钮）
+
+#### 4. 测试更新
+- 重写 `test/widget_test.dart`：替换旧计数器测试，新增笔记列表页渲染测试和滑动删除测试
+
+### 验证结果
+- `flutter analyze`: No issues found (0 errors, 0 warnings)
+- `flutter test`: All tests passed! (2 tests)
+
+### 技术决策
+- 命名路由 vs go_router: 当前使用 Flutter 内置命名路由，Week 3 引入 go_router 时可平滑迁移
+- Mock 数据: 在 `_NotesListPageState` 中生成 6 条假数据，Week 2 接入 drift 后替换为数据库查询
+- Card 零阴影设计: 使用 `surfaceContainerHighest` 背景色 + 圆角，Material 3 风格
+
+### 明日计划 (Week 1 Day 2)
+- Riverpod 状态管理接入 (Provider 体系搭建)
+- 笔记编辑器页面 UI 原型
+- Markdown 渲染组件集成

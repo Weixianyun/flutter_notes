@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
 
+import 'core/router/app_router.dart';
+import 'core/theme/app_theme.dart';
+
+/// Flutter Notes 应用根组件
+///
+/// 集成 Material 3 主题系统（明暗双模式）与命名路由。
 class FlutterNotesApp extends StatelessWidget {
   const FlutterNotesApp({super.key});
 
@@ -8,21 +14,10 @@ class FlutterNotesApp extends StatelessWidget {
     return MaterialApp(
       title: 'Flutter Notes',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorSchemeSeed: const Color(0xFF6750A4),
-        useMaterial3: true,
-        brightness: Brightness.light,
-      ),
-      darkTheme: ThemeData(
-        colorSchemeSeed: const Color(0xFF6750A4),
-        useMaterial3: true,
-        brightness: Brightness.dark,
-      ),
-      home: const Scaffold(
-        body: Center(
-          child: Text('Flutter Notes - 环境就绪'),
-        ),
-      ),
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      initialRoute: AppRouter.home,
+      onGenerateRoute: AppRouter.onGenerateRoute,
     );
   }
 }
