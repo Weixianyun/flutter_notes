@@ -48,6 +48,25 @@ a549d39 fix: disable Kotlin incremental compilation, defer file_picker to Week 9
 ea6bfe8 chore: initial Flutter project setup
 ```
 
+## 2026-08-13 | README 中英文双语
+
+### 今日完成
+
+#### README 中英文可切换
+- 创建 `README.md` (英文版),顶部添加语言切换链接
+- 创建 `README_zh.md` (中文版),顶部添加语言切换链接
+- 两份 README 均包含完整项目信息:
+  - 功能特性、技术栈表格
+  - 项目目录结构树
+  - 安装与运行指南
+  - 代码生成与代码检查说明
+  - 开发日志链接
+
+### Git 提交记录
+```
+(pending) docs: add bilingual README with Chinese-English toggle
+```
+
 ### 明日计划 (Week 1 Day 1)
 - Dart 语言基础复习 (类型系统、空安全、异步)
 - 搭建应用骨架: 路由配置、主题系统
