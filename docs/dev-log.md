@@ -88,7 +88,7 @@ fb700d5 docs: add bilingual README with Chinese-English toggle
 
 ### Git 提交记录
 ```
-(pending) docs: update dev-log, mark completed items
+3b82761 docs: mark TraeCode Flutter plugin and GitHub OAuth App as completed
 ```
 
 ### 明日计划 (Week 1 Day 1)
