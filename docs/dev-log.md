@@ -72,8 +72,26 @@ fb700d5 docs: add bilingual README with Chinese-English toggle
 - 搭建应用骨架: 路由配置、主题系统
 - 创建笔记列表页面 UI 原型
 
-### 遗留事项
-- [ ] TraeCode 安装 Flutter 插件
-- [ ] GitHub OAuth App 创建 (需 callback URL: `flutternotes://oauth/callback`)
-- [ ] GitHub 仓库创建并推送代码
+## 2026-08-13 | 遗留事项完成
+
+### 今日完成
+
+#### 环境配置收尾
+- **TraeCode Flutter 插件**: 已安装,支持 Dart/Flutter 语法高亮、代码补全、调试
+- **GitHub OAuth App**: 已创建,callback URL `flutternotes://oauth/callback`,为后续 GitHub 云同步功能做好准备
+
+### 遗留事项状态
+- [x] TraeCode 安装 Flutter 插件
+- [x] GitHub OAuth App 创建 (callback URL: `flutternotes://oauth/callback`)
+- [x] GitHub 仓库创建并推送代码
 - [ ] file_picker 兼容性问题 (Week 9 解决)
+
+### Git 提交记录
+```
+(pending) docs: update dev-log, mark completed items
+```
+
+### 明日计划 (Week 1 Day 1)
+- Dart 语言基础复习 (类型系统、空安全、异步)
+- 搭建应用骨架: 路由配置、主题系统
+- 创建笔记列表页面 UI 原型
