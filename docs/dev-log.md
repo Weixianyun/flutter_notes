@@ -143,6 +143,11 @@ fb700d5 docs: add bilingual README with Chinese-English toggle
 - Mock 数据: 在 `_NotesListPageState` 中生成 6 条假数据，Week 2 接入 drift 后替换为数据库查询
 - Card 零阴影设计: 使用 `surfaceContainerHighest` 背景色 + 圆角，Material 3 风格
 
+### Git 提交记录
+```
+74257e3 feat: Week 1 Day 1 - app skeleton, theme system, notes list UI
+```
+
 ### 明日计划 (Week 1 Day 2)
 - Riverpod 状态管理接入 (Provider 体系搭建)
 - 笔记编辑器页面 UI 原型
