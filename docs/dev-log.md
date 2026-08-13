@@ -64,7 +64,7 @@ ea6bfe8 chore: initial Flutter project setup
 
 ### Git 提交记录
 ```
-(pending) docs: add bilingual README with Chinese-English toggle
+fb700d5 docs: add bilingual README with Chinese-English toggle
 ```
 
 ### 明日计划 (Week 1 Day 1)
