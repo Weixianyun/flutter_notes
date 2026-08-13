@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../features/editor/pages/note_editor_page.dart';
 import '../../features/notes/pages/notes_list_page.dart';
 
 /// 应用路由配置
@@ -18,8 +19,10 @@ class AppRouter {
   /// 路由表生成
   static Map<String, WidgetBuilder> get routes => {
         home: (_) => const NotesListPage(),
+        editor: (context) => NoteEditorPage(
+              noteId: ModalRoute.of(context)?.settings.arguments as String?,
+            ),
         // 以下路由为占位，后续 Week 逐步实现
-        editor: (_) => const _PlaceholderPage(title: '编辑器'),
         search: (_) => const _PlaceholderPage(title: '搜索'),
         settings: (_) => const _PlaceholderPage(title: '设置'),
       };

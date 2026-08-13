@@ -152,3 +152,80 @@ fb700d5 docs: add bilingual README with Chinese-English toggle
 - Riverpod 状态管理接入 (Provider 体系搭建)
 - 笔记编辑器页面 UI 原型
 - Markdown 渲染组件集成
+
+## 2026-08-14 | Week 1 Day 2 — Riverpod 状态管理 + 编辑器 + Markdown 预览
+
+### 今日完成
+
+#### 1. Riverpod 状态管理接入
+
+##### Provider 体系搭建
+- `main.dart`: 添加 `ProviderScope` 包裹根组件，启用 Riverpod 依赖注入
+- `lib/data/repositories/note_repository.dart`: 定义 `NoteRepository` 抽象接口 + `MockNoteRepository` 内存实现
+  - CRUD 操作: `getAllNotes` / `getNoteById` / `addNote` / `updateNote` / `deleteNote`
+  - 6 条 Mock 种子数据（含 Markdown 格式内容）
+  - `List.from(_seedData)` 避免静态列表引用共享
+- `lib/features/notes/providers/notes_provider.dart`: `NotesNotifier` (extends `Notifier<List<NoteModel>>`)
+  - `noteRepositoryProvider`: Provider 暴露仓库实例
+  - `notesProvider`: NotifierProvider 管理笔记列表状态
+  - 所有变更同步写入仓库，确保数据一致性
+
+##### 笔记列表页重构
+- `notes_list_page.dart`: `StatefulWidget` → `ConsumerWidget`
+  - `ref.watch(notesProvider)` 替代本地 `_notes` 状态
+  - 删除/撤销通过 `ref.read(notesProvider.notifier)` 调用
+  - 移除 `_generateMockNotes()` 方法（数据源迁移至 MockNoteRepository）
+
+#### 2. 笔记编辑器页面 UI 原型
+
+##### 编辑器状态管理
+- `lib/features/editor/providers/editor_provider.dart`: `previewModeProvider` (StateProvider.autoDispose<bool>)
+  - 管理 编辑/预览 模式切换，每次打开编辑器自动重置为编辑模式
+
+##### 编辑器页面 (`note_editor_page.dart`)
+- `ConsumerStatefulWidget` + `TextEditingController` 管理标题和内容输入
+- 标题输入框（大字体粗体）+ 优先级 `SegmentedButton` 选择器 + 标签 `Chip` 列表
+- Markdown 格式工具栏（10 个快捷按钮）: 加粗、斜体、行内代码、标题、无序列表、有序列表、引用、待办、链接、代码块
+  - `_wrapSelection()`: 选中文本两侧包裹标记
+  - `_insertPrefix()`: 行首插入前缀
+- 编辑/预览模式切换（AppBar 图标按钮）
+- `PopScope` 未保存更改退出确认对话框
+- 保存逻辑: 空内容校验 → 新增/更新笔记 → SnackBar 提示 → 返回列表页
+
+##### 路由对接
+- `app_router.dart`: 编辑器路由从占位页面替换为 `NoteEditorPage`
+  - `ModalRoute.of(context)?.settings.arguments` 传递 noteId 参数
+
+#### 3. Markdown 渲染组件集成
+
+##### Markdown 预览组件 (`markdown_preview.dart`)
+- 基于 `flutter_markdown` 包，支持 `Markdown` (可滚动) 和 `MarkdownBody` (不可滚动) 两种模式
+- 定制 `MarkdownStyleSheet` 适配 Material 3 主题:
+  - h1/h2/h3 标题样式
+  - 代码块/行内代码样式（monospace + surfaceContainerHighest 背景）
+  - 引用块左侧边框装饰
+  - 表格边框 + 表头加粗
+  - 列表项目符号颜色
+- `selectable: true` 支持文本选择
+
+#### 4. 测试更新
+- 重写 `test/widget_test.dart`（3 项测试）:
+  1. 笔记列表渲染（标题 + FAB + Dismissible 卡片）
+  2. FAB 点击打开编辑器（标题输入 + 内容输入 2 个 TextField）
+  3. 编辑器预览切换（输入 Markdown → 切换预览 → 验证渲染结果）
+
+### 验证结果
+- `flutter analyze`: No issues found (0 errors, 0 warnings)
+- `flutter test`: All tests passed! (3 tests)
+
+### 技术决策
+- Riverpod 2.x Notifier: 使用 `Notifier<T>` + `NotifierProvider`（非已废弃的 `StateNotifier`）
+- 编辑器状态: TextEditingController 管理文本输入（保持光标控制），Riverpod 管理非文本状态（预览模式）
+- autoDispose: `previewModeProvider` 使用 autoDispose，每次打开编辑器自动重置
+- Mock 数据迁移: 从页面级 `_generateMockNotes()` 迁移至 `MockNoteRepository`，为 Week 2 drift 替换做准备
+- 工具栏实现: 通过 `TextEditingController.selection` 操作选区，支持包裹和行首插入两种模式
+
+### 明日计划 (Week 1 Day 3)
+- 搜索功能实现 (搜索页面 + Provider 过滤)
+- 笔记标签管理系统
+- 设置页面 UI
