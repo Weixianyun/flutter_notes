@@ -225,6 +225,11 @@ fb700d5 docs: add bilingual README with Chinese-English toggle
 - Mock 数据迁移: 从页面级 `_generateMockNotes()` 迁移至 `MockNoteRepository`，为 Week 2 drift 替换做准备
 - 工具栏实现: 通过 `TextEditingController.selection` 操作选区，支持包裹和行首插入两种模式
 
+### Git 提交记录
+```
+c3379dd feat: Week 1 Day 2 - Riverpod state management, note editor, Markdown preview
+```
+
 ### 明日计划 (Week 1 Day 3)
 - 搜索功能实现 (搜索页面 + Provider 过滤)
 - 笔记标签管理系统
