@@ -542,7 +542,7 @@ b5b69f5 feat: Week 1 Day 3 - search, tag management, settings page
 
 ### Git 提交记录
 ```
-(commit hash pending)
+5d20b1f feat: Week 1 Day 5 - encryption, preferences persistence, and unit tests
 ```
 
 ### 明日计划 (Week 2 Day 1)
