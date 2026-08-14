@@ -1,21 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../services/service_providers.dart';
+
 /// 主题模式状态管理
 ///
 /// 支持浅色、深色、跟随系统三种模式。
-/// Week 2 接入 shared_preferences 后将持久化保存。
+/// 通过 [PreferencesService] 持久化保存，应用启动时自动恢复。
 class ThemeModeNotifier extends Notifier<ThemeMode> {
   @override
-  ThemeMode build() => ThemeMode.system;
+  ThemeMode build() {
+    final prefs = ref.read(preferencesServiceProvider);
+    return prefs.getThemeMode();
+  }
 
-  /// 设置主题模式
-  void setMode(ThemeMode mode) => state = mode;
+  /// 设置主题模式并持久化
+  void setMode(ThemeMode mode) {
+    final prefs = ref.read(preferencesServiceProvider);
+    prefs.setThemeMode(mode);
+    state = mode;
+  }
 }
 
 /// 主题模式 Provider
 final themeModeProvider =
     NotifierProvider<ThemeModeNotifier, ThemeMode>(ThemeModeNotifier.new);
+
+/// 加密状态 Provider（用于设置页展示）
+final encryptionStatusProvider = Provider<bool>((ref) {
+  final crypto = ref.watch(encryptionServiceProvider);
+  return crypto.hasKey;
+});
 
 /// 应用版本号
 const String appVersion = '0.1.0';

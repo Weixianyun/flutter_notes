@@ -430,3 +430,122 @@ b5b69f5 feat: Week 1 Day 3 - search, tag management, settings page
 - 加密存储集成 (AES-256 + encrypt 包)
 - shared_preferences 持久化设置 (主题模式等)
 - 数据库 Repository 单元测试
+
+## 2026-08-14 | Week 1 Day 5 — 加密存储 + 偏好持久化 + 单元测试
+
+### 今日完成
+
+#### 1. AES-256 加密服务 (`lib/services/crypto_service.dart`)
+
+##### 加密实现
+- 使用 `encrypt` 包的 `AES` + `AESMode.cbc` + PKCS7 填充
+- 密钥: 32 字节 (256 bits)，通过 `Key.fromLength(32)` 生成（内部使用 `Random.secure()`）
+- IV: 16 字节 (128 bits)，每次加密独立生成随机 IV
+- 密文格式: `base64(IV):base64(ciphertext)`，Base64 字符集不含 `:`，分隔安全
+
+##### 密钥管理
+- 首次使用时自动生成密钥，以 Base64 编码存储在 `SharedPreferences`
+- 后续实例从 `SharedPreferences` 加载已有密钥，确保跨会话解密一致性
+- `regenerateKey()`: 重新生成密钥（已加密数据将无法解密）
+- `hasKey`: 检查密钥是否存在，用于设置页展示加密状态
+
+##### 边界处理
+- 空字符串特殊处理: `encrypt('')` 返回 `base64(IV):`（ciphertext 部分为空），`decrypt` 识别空 ciphertext 直接返回空串
+- `FormatException`: 密文格式不合法时抛出异常
+- `encryptBytes` / `decryptBytes`: 字节数据加密/解密（通过 UTF-8 编解码桥接）
+
+##### Provider 集成
+- `lib/services/service_providers.dart`: 创建 `sharedPreferencesProvider`、`preferencesServiceProvider`、`encryptionServiceProvider`
+- `sharedPreferencesProvider` 必须在 `main.dart` 中 override（强制初始化模式）
+- `encryptionServiceProvider` 依赖 `sharedPreferencesProvider`，自动获取密钥
+
+#### 2. shared_preferences 偏好持久化
+
+##### PreferencesService (`lib/services/preferences_service.dart`)
+- 封装 `SharedPreferences`，提供类型安全的设置项读写
+- 主题模式: `getThemeMode()` / `setThemeMode(ThemeMode)` — 默认跟随系统
+- Markdown 自动预览: `getMarkdownAutoPreview()` / `setMarkdownAutoPreview(bool)` — 默认开启
+- 默认优先级: `getDefaultPriority()` / `setDefaultPriority(String)` — 默认 medium
+
+##### 应用初始化 (`lib/main.dart`)
+- `WidgetsFlutterBinding.ensureInitialized()` 确保 Flutter 绑定初始化
+- `SharedPreferences.getInstance()` 异步获取实例
+- `ProviderScope.overrides` 注入 `sharedPreferencesProvider`
+
+##### 主题模式持久化 (`lib/features/settings/providers/settings_provider.dart`)
+- `ThemeModeNotifier.build()`: 从 `PreferencesService` 读取已保存的主题模式
+- `ThemeModeNotifier.setMode()`: 更新状态并异步写入 `SharedPreferences`
+- 应用重启后自动恢复上次选择的主题模式
+- 新增 `encryptionStatusProvider`: 暴露加密状态供设置页使用
+
+##### 设置页增强 (`lib/features/settings/pages/settings_page.dart`)
+- 加密设置: 根据 `encryptionStatusProvider` 展示锁定/解锁图标和状态文本
+- 清空所有笔记: 调用 `NotesNotifier.clearAllNotes()` 实现真实清空逻辑
+- 加密信息弹窗: 根据 `isEncrypted` 展示不同内容
+
+##### NotesNotifier 扩展
+- 新增 `clearAllNotes()`: 获取所有笔记并逐条删除，最后 `invalidateSelf()`
+
+#### 3. 数据库 Repository 单元测试 (`test/repositories/note_repository_test.dart`)
+
+##### 测试覆盖 (18 项)
+- `getAllNotes`: 验证种子数据排序（updatedAt 倒序）和标题完整性
+- `getNoteById`: 验证存在/不存在 ID 的返回值
+- `addNote`: 验证新增笔记可检索、计数增加、标签 JSON 数组保持
+- `updateNote`: 验证字段更新、标签更新、不产生重复
+- `deleteNote`: 验证删除后计数减少、getNoteById 返回 null、不存在的 ID 不抛异常
+- `watchAllNotes`: 验证初始数据发射和数据变更后更新
+- 实体转换: 优先级枚举、状态枚举、空标签列表、特殊字符（表情/引号/符号）往返测试
+
+##### 测试模式
+- `setUp`: 每个测试创建独立的 `AppDatabase.forTesting()` 内存数据库
+- `tearDown`: 关闭数据库连接
+- 使用 `expectLater` + `completes` 验证异步不抛异常
+
+#### 4. 加密服务单元测试 (`test/services/encryption_service_test.dart`)
+
+##### 测试覆盖 (16 项)
+- 密钥管理: 首次生成存储、hasKey 判断、跨实例复用、regenerateKey 生成不同密钥
+- 加解密: 往返测试、密文不同于明文、随机 IV 产生不同密文、空字符串、长文本、特殊字符、JSON 内容
+- 错误处理: 无效格式抛 FormatException、缺少分隔符抛 FormatException
+- 字节数据: encryptBytes/decryptBytes 往返
+- 跨实例解密: 实例 A 加密、实例 B 解密
+
+#### 5. Widget 测试更新 (`test/widget_test.dart`)
+- 添加 `sharedPreferencesProvider` override（使用 `SharedPreferences.setMockInitialValues({})`）
+- 设置页测试新增加密状态验证: `AES-256 加密已启用`
+
+### 遇到的问题及解决
+
+#### 问题 1: `late final` 字段无法重新赋值
+- **现象**: `regenerateKey()` 中 `_key = newKey` 抛 `LateInitializationError`
+- **原因**: `late final` 字段只能赋值一次，构造函数已赋值后无法再赋
+- **解决**: 将 `late final Key _key` 和 `late final Encrypter _encrypter` 改为 `late Key` 和 `late Encrypter`（去掉 `final`）
+
+#### 问题 2: AES-CBC 加密空字符串抛 RangeError
+- **现象**: `encrypt('')` 时 pointycastle `PaddedBlockCipherImpl.doFinal` 抛 `RangeError (start): Invalid value: Only valid value is 0: -16`
+- **原因**: pointycastle 的 PKCS7 填充实现在输入为空时计算子数组越界
+- **解决**: 空字符串特殊处理 — `encrypt('')` 返回 `base64(IV):`（空 ciphertext），`decrypt` 识别空 ciphertext 直接返回空串
+
+### 验证结果
+- `flutter analyze`: No issues found (0 errors, 0 warnings, 0 infos)
+- `flutter test`: All tests passed! (40 tests)
+  - Widget tests: 6 passed
+  - Repository tests: 18 passed
+  - Encryption service tests: 16 passed
+
+### 技术决策
+- **SharedPreferences 注入模式**: 使用 `Provider.overrideWithValue` 在 `main.dart` 中注入已初始化的 `SharedPreferences` 实例，确保整个应用同步可用，避免异步初始化的 UI 闪烁
+- **密钥存储位置**: 当前存储在 `SharedPreferences`（明文），后续可迁移至 `flutter_secure_storage`（Android Keystore / iOS Keychain）增强安全性
+- **密文格式**: `IV:ciphertext` 分隔符方案简单可解析，Base64 字符集不含 `:` 确保分隔安全
+- **空字符串边界处理**: 使用空 ciphertext 标记空明文，避免 pointycastle 底层 bug，保持 API 透明
+
+### Git 提交记录
+```
+(commit hash pending)
+```
+
+### 明日计划 (Week 2 Day 1)
+- GitHub OAuth 认证流程实现
+- WebView 授权页 + authorization_code 获取
+- access_token 换取 + 加密存储

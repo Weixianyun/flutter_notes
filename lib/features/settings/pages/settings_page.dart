@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../notes/providers/notes_provider.dart';
 import '../providers/settings_provider.dart';
 
 /// 设置页面
@@ -13,6 +14,7 @@ class SettingsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
+    final isEncrypted = ref.watch(encryptionStatusProvider);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
@@ -61,11 +63,16 @@ class SettingsPage extends ConsumerWidget {
             onTap: () => _showSyncInfo(context),
           ),
           ListTile(
-            leading: const Icon(Icons.lock_outline),
+            leading: Icon(
+              isEncrypted ? Icons.lock : Icons.lock_open,
+              color: isEncrypted ? colorScheme.primary : colorScheme.error,
+            ),
             title: const Text('加密设置'),
-            subtitle: const Text('AES-256 本地加密'),
+            subtitle: Text(
+              isEncrypted ? 'AES-256 加密已启用' : '加密未启用',
+            ),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => _showEncryptionInfo(context),
+            onTap: () => _showEncryptionInfo(context, isEncrypted),
           ),
           const Divider(height: 32),
 
@@ -157,14 +164,19 @@ class SettingsPage extends ConsumerWidget {
     );
   }
 
-  void _showEncryptionInfo(BuildContext context) {
+  void _showEncryptionInfo(BuildContext context, bool isEncrypted) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('加密设置'),
-        content: const Text(
-          '所有本地笔记数据使用 AES-256 加密存储。\n\n'
-          '密钥管理将在后续版本中完善。',
+        content: Text(
+          isEncrypted
+              ? 'AES-256 加密已启用。\n\n'
+                  '本地敏感数据（如 GitHub OAuth Token）使用 '
+                  'AES-256-CBC 模式加密存储，每次加密使用独立随机 IV。\n\n'
+                  '密钥安全存储在设备本地。'
+              : '加密未启用。\n\n'
+                  '首次使用加密功能时将自动生成密钥。',
         ),
         actions: [
           TextButton(
@@ -194,9 +206,10 @@ class SettingsPage extends ConsumerWidget {
             child: const Text('取消'),
           ),
           FilledButton(
-            onPressed: () {
-              // TODO: 通过 Provider 清空笔记
+            onPressed: () async {
               Navigator.pop(context);
+              await ref.read(notesProvider.notifier).clearAllNotes();
+              if (!context.mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('已清空所有笔记')),
               );

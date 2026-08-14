@@ -55,6 +55,16 @@ class NotesNotifier extends AsyncNotifier<List<NoteModel>> {
   Future<void> refresh() async {
     ref.invalidateSelf();
   }
+
+  /// 清空所有笔记
+  Future<void> clearAllNotes() async {
+    final repository = ref.read(noteRepositoryProvider);
+    final notes = await repository.getAllNotes();
+    for (final note in notes) {
+      await repository.deleteNote(note.id);
+    }
+    ref.invalidateSelf();
+  }
 }
 
 /// 笔记列表 Provider

@@ -2,24 +2,32 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:drift/drift.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:flutter_notes/app.dart';
 import 'package:flutter_notes/data/database/app_database.dart';
 import 'package:flutter_notes/data/database/database_provider.dart';
+import 'package:flutter_notes/services/service_providers.dart';
 
 void main() {
   // 测试中每个 testWidgets 创建独立的内存数据库，抑制多重数据库警告
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
 
-  /// 测试用 override 列表，使用内存数据库
-  List<Override> testOverrides() => [
-        appDatabaseProvider.overrideWithValue(AppDatabase.forTesting()),
-      ];
+  /// 测试用 override 列表
+  Future<List<Override>> testOverrides() async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    return [
+      appDatabaseProvider.overrideWithValue(AppDatabase.forTesting()),
+      sharedPreferencesProvider.overrideWithValue(prefs),
+    ];
+  }
 
   Future<void> pumpApp(WidgetTester tester) async {
+    final overrides = await testOverrides();
     await tester.pumpWidget(
       ProviderScope(
-        overrides: testOverrides(),
+        overrides: overrides,
         child: const FlutterNotesApp(),
       ),
     );
@@ -105,6 +113,9 @@ void main() {
     // 应有主题模式选择器
     expect(find.text('主题模式'), findsOneWidget);
     expect(find.byType(SegmentedButton<ThemeMode>), findsOneWidget);
+    // 应显示加密设置
+    expect(find.text('加密设置'), findsOneWidget);
+    expect(find.text('AES-256 加密已启用'), findsOneWidget);
     // 滚动到底部，应有版本信息
     await tester.scrollUntilVisible(
       find.text('版本'),
