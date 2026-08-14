@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../features/editor/pages/note_editor_page.dart';
 import '../../features/notes/pages/notes_list_page.dart';
+import '../../features/search/pages/search_page.dart';
+import '../../features/settings/pages/settings_page.dart';
 
 /// 应用路由配置
 ///
@@ -22,9 +24,8 @@ class AppRouter {
         editor: (context) => NoteEditorPage(
               noteId: ModalRoute.of(context)?.settings.arguments as String?,
             ),
-        // 以下路由为占位，后续 Week 逐步实现
-        search: (_) => const _PlaceholderPage(title: '搜索'),
-        settings: (_) => const _PlaceholderPage(title: '设置'),
+        search: (_) => const SearchPage(),
+        settings: (_) => const SettingsPage(),
       };
 
   /// 生成路由（支持转场动画）
@@ -32,32 +33,15 @@ class AppRouter {
     final builder = routes[settings.name];
     if (builder == null) {
       return MaterialPageRoute(
-        builder: (_) => const _PlaceholderPage(title: '未知页面'),
+        builder: (_) => Scaffold(
+          appBar: AppBar(title: const Text('页面不存在')),
+          body: const Center(child: Text('404')),
+        ),
       );
     }
     return MaterialPageRoute(
       builder: builder,
       settings: settings,
-    );
-  }
-}
-
-/// 占位页面（后续替换为真实页面）
-class _PlaceholderPage extends StatelessWidget {
-  const _PlaceholderPage({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: Center(
-        child: Text(
-          '$title — 即将实现',
-          style: Theme.of(context).textTheme.bodyLarge,
-        ),
-      ),
     );
   }
 }

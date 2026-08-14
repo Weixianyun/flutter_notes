@@ -5,19 +5,23 @@ import '../../../core/router/app_router.dart';
 import '../../../data/models/note_model.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../providers/notes_provider.dart';
+import '../providers/tags_provider.dart';
 import '../widgets/note_card.dart';
+import '../widgets/tag_filter_bar.dart';
 
 /// 笔记列表页面
 ///
 /// 应用首页，展示所有笔记的卡片列表。
-/// 通过 Riverpod [notesProvider] 管理笔记数据，
-/// 支持搜索入口、新建笔记、滑动删除、长按操作菜单。
+/// 通过 Riverpod [filteredNotesProvider] 管理过滤后的笔记数据，
+/// 支持标签过滤、搜索入口、新建笔记、滑动删除、长按操作菜单。
 class NotesListPage extends ConsumerWidget {
   const NotesListPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final notes = ref.watch(notesProvider);
+    final notes = ref.watch(filteredNotesProvider);
+    final allNotes = ref.watch(notesProvider);
+    final hasTags = ref.watch(allTagsProvider).isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
@@ -36,9 +40,20 @@ class NotesListPage extends ConsumerWidget {
           ),
         ],
       ),
-      body: notes.isEmpty
-          ? _buildEmptyState(context, ref)
-          : _buildNotesList(context, ref, notes),
+      body: Column(
+        children: [
+          // 标签过滤栏（有标签时显示）
+          if (hasTags) const TagFilterBar(),
+          // 笔记列表
+          Expanded(
+            child: allNotes.isEmpty
+                ? _buildEmptyState(context, ref)
+                : notes.isEmpty
+                    ? _buildNoFilteredNotes(context, ref)
+                    : _buildNotesList(context, ref, notes),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _createNote(context),
         icon: const Icon(Icons.add),
@@ -93,6 +108,16 @@ class NotesListPage extends ConsumerWidget {
       subtitle: '点击右下角按钮创建你的第一条笔记',
       actionLabel: '新建笔记',
       onAction: () => _createNote(context),
+    );
+  }
+
+  Widget _buildNoFilteredNotes(BuildContext context, WidgetRef ref) {
+    return EmptyState(
+      icon: Icons.filter_alt_off_outlined,
+      title: '没有匹配的笔记',
+      subtitle: '当前标签筛选下没有笔记，试试其他标签',
+      actionLabel: '清除筛选',
+      onAction: () => ref.read(selectedTagsProvider.notifier).clear(),
     );
   }
 

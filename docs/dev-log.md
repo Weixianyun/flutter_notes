@@ -234,3 +234,87 @@ c3379dd feat: Week 1 Day 2 - Riverpod state management, note editor, Markdown pr
 - 搜索功能实现 (搜索页面 + Provider 过滤)
 - 笔记标签管理系统
 - 设置页面 UI
+
+## 2026-08-14 | Week 1 Day 3 — 搜索功能 + 标签管理 + 设置页面
+
+### 今日完成
+
+#### 1. 搜索功能实现
+
+##### 搜索 Provider (`lib/features/search/providers/search_provider.dart`)
+- `searchQueryProvider` (StateProvider<String>): 搜索查询文本
+- `searchResultsProvider` (Provider<List<NoteModel>>): 监听 notesProvider + searchQuery，按标题/内容/标签模糊匹配
+- `SearchHistoryNotifier` (Notifier<List<String>>): 搜索历史管理（去重、限 10 条、增删清空）
+
+##### 搜索页面 (`lib/features/search/pages/search_page.dart`)
+- ConsumerStatefulWidget + TextEditingController + FocusNode（自动聚焦）
+- 三态展示：无查询→搜索历史 / 有查询无结果→空状态 / 有结果→NoteCard 列表
+- 搜索历史: InputChip 展示，支持点击回搜和单独删除
+- 点击搜索结果进入编辑器并记录搜索历史
+
+#### 2. 笔记标签管理系统
+
+##### 标签 Provider (`lib/features/notes/providers/tags_provider.dart`)
+- `allTagsProvider` (Provider<List<TagInfo>>): 从所有笔记提取去重标签，按使用频率降序排列
+- `SelectedTagsNotifier` (Notifier<Set<String>>): 选中标签集合管理（toggle/select/clear）
+- `filteredNotesProvider` (Provider<List<NoteModel>>): 无选中标签返回全部，否则返回包含任一选中标签的笔记
+- `TagInfo` 数据类：标签名 + 使用次数
+
+##### 标签过滤栏 (`lib/features/notes/widgets/tag_filter_bar.dart`)
+- 水平滚动 FilterChip 列表，「全部」+ 各标签（显示名称和计数）
+- 多选过滤，点击「全部」清除所有选中标签
+- 无标签时自动隐藏（SizedBox.shrink）
+
+##### 笔记列表页集成
+- `notes_list_page.dart`: 从 `notesProvider` 改为 `filteredNotesProvider`
+- 新增标签过滤栏（Column 布局，栏 + Expanded 列表）
+- 新增过滤无结果空状态（带「清除筛选」操作按钮）
+
+#### 3. 设置页面 UI
+
+##### 设置 Provider (`lib/features/settings/providers/settings_provider.dart`)
+- `ThemeModeNotifier` (Notifier<ThemeMode>): 主题模式状态（system/light/dark）
+- `appVersion` / `githubRepoUrl` 常量
+
+##### 设置页面 (`lib/features/settings/pages/settings_page.dart`)
+- 四个分区：外观 / 云同步 / 数据管理 / 关于
+- 外观: SegmentedButton 三档主题模式切换（浅色/系统/深色）
+- 云同步: GitHub 同步 + 加密设置（信息弹窗占位）
+- 数据管理: 导出/导入笔记 + 清空确认对话框
+- 关于: 版本号 + GitHub 仓库链接 + 开源许可页面
+
+#### 4. 应用集成
+
+##### 路由对接
+- `app_router.dart`: search 和 settings 路由从占位页面替换为真实页面
+- 移除 `_PlaceholderPage` 内部类，未知路由改为 404 页面
+
+##### 主题模式集成
+- `app.dart`: StatelessWidget → ConsumerWidget
+- 通过 `ref.watch(themeModeProvider)` 动态控制 MaterialApp.themeMode
+- 主题切换实时生效，无需重启应用
+
+#### 5. 测试更新
+- 扩展 `test/widget_test.dart` 至 6 项测试:
+  1. 笔记列表渲染（标题 + FAB + Dismissible + FilterChip 标签栏）
+  2. FAB 打开编辑器（2 个 TextField）
+  3. 编辑器预览切换（Markdown 渲染验证）
+  4. 搜索页面空状态（搜索框 + 提示文本）
+  5. 搜索过滤（输入"Dart"→匹配笔记卡片）
+  6. 设置页面（主题选择器 + 滚动至版本信息）
+
+### 验证结果
+- `flutter analyze`: No issues found (0 errors, 0 warnings)
+- `flutter test`: All tests passed! (6 tests)
+
+### 技术决策
+- 搜索 Provider 设计: 使用 Provider 组合（watch notesProvider + searchQueryProvider）而非在 Notifier 内管理，保持单向数据流
+- 标签过滤: OR 逻辑（包含任一选中标签即显示），多选模式适合探索性浏览
+- 主题模式: StateProvider → Notifier，为后续 shared_preferences 持久化预留接口
+- ActionChip → InputChip: Material 3 中 ActionChip 不支持 onDeleted，搜索历史需删除功能改用 InputChip
+- 过滤空状态: 区分「无笔记」和「有笔记但过滤无结果」两种空状态，提供不同的操作引导
+
+### 明日计划 (Week 1 Day 4)
+- drift 数据库集成 (表结构定义 + 代码生成)
+- NoteRepository 从 Mock 迁移至 DriftNoteRepository
+- 数据库迁移与种子数据
