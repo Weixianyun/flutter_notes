@@ -314,6 +314,11 @@ c3379dd feat: Week 1 Day 2 - Riverpod state management, note editor, Markdown pr
 - ActionChip → InputChip: Material 3 中 ActionChip 不支持 onDeleted，搜索历史需删除功能改用 InputChip
 - 过滤空状态: 区分「无笔记」和「有笔记但过滤无结果」两种空状态，提供不同的操作引导
 
+### Git 提交记录
+```
+b5b69f5 feat: Week 1 Day 3 - search, tag management, settings page
+```
+
 ### 明日计划 (Week 1 Day 4)
 - drift 数据库集成 (表结构定义 + 代码生成)
 - NoteRepository 从 Mock 迁移至 DriftNoteRepository
