@@ -323,3 +323,110 @@ b5b69f5 feat: Week 1 Day 3 - search, tag management, settings page
 - drift 数据库集成 (表结构定义 + 代码生成)
 - NoteRepository 从 Mock 迁移至 DriftNoteRepository
 - 数据库迁移与种子数据
+
+## 2026-08-14 | Week 1 Day 4 — drift 数据库集成
+
+### 今日完成
+
+#### 1. drift 表定义与数据库类
+
+##### 数据库 Schema (`lib/data/database/app_database.dart`)
+- 定义 `Notes` 表结构，8 列与 `NoteModel` 字段一一对应:
+  - `id` (TEXT, 主键, UUID), `title` (TEXT, 默认空串)
+  - `content` (TEXT, 默认空串), `priority` (TEXT, 默认 medium)
+  - `status` (TEXT, 默认 draft), `tags` (TEXT, 默认 [] JSON 数组)
+  - `createdAt` / `updatedAt` (DateTime, 默认 currentDateAndTime)
+- `AppDatabase` 继承 `_$AppDatabase`，schemaVersion = 1
+- `MigrationStrategy.onCreate`: 建表 + 插入 6 条种子数据（与 Mock 数据一致）
+- `_openConnection()`: 使用 `path_provider` 获取文档目录，`NativeDatabase` 持久化到 `flutter_notes.db`
+- `AppDatabase.forTesting()`: 内存数据库构造函数，用于单元/Widget 测试
+
+##### 数据库 Provider (`lib/data/database/database_provider.dart`)
+- `appDatabaseProvider`: 全局单例 `AppDatabase`，`ref.onDispose` 自动关闭连接
+- 测试时通过 override 替换为 `AppDatabase.forTesting()`
+
+#### 2. build_runner 代码生成
+- `dart run build_runner build --delete-conflicting-outputs` 生成 `app_database.g.dart`
+- 生成内容: `$NotesTable` 表信息类、`Note` 数据类、`NotesCompanion` 伴生类、`_$AppDatabase` 数据库实现
+- 构建耗时 31s，49 个输出文件
+
+#### 3. Repository 接口异步化 + DriftNoteRepository
+
+##### 接口异步化 (`lib/data/repositories/note_repository.dart`)
+- `NoteRepository` 抽象接口: 所有方法改为 `Future<T>` / `Stream<T>` 返回类型
+- 新增 `watchAllNotes()`: 返回 `Stream<List<NoteModel>>`，支持响应式数据监听
+- `MockNoteRepository`: 保持兼容，所有方法改为 async，`watchAllNotes` 产出单次快照
+
+##### DriftNoteRepository 实现
+- 基于 `AppDatabase` 实现 CRUD，通过 `_toModel()` / `_toCompanion()` 在 `Note`（drift 实体）和 `NoteModel`（领域模型）间转换
+- `tags` 字段: JSON 字符串 ↔ `List<String>`（`jsonEncode` / `jsonDecode`）
+- `priority` / `status` 字段: 枚举名称字符串 ↔ 枚举值（`name` / `firstWhere`）
+- 查询使用 `select` + `orderBy`（按 `updatedAt` 倒序）+ `where`（按 `id` 过滤）
+
+#### 4. NotesNotifier → AsyncNotifier
+
+##### 状态管理重构 (`lib/features/notes/providers/notes_provider.dart`)
+- `NotesNotifier`: `Notifier<List<NoteModel>>` → `AsyncNotifier<List<NoteModel>>`
+- `build()`: 异步调用 `repository.getAllNotes()`，返回 `Future<List<NoteModel>>`
+- `addNote` / `updateNote` / `deleteNote`: 异步写入后 `ref.invalidateSelf()` 触发重建
+- `getNoteById`: 改为 `Future<NoteModel?>`，编辑器页异步加载笔记
+- `noteRepositoryProvider`: `MockNoteRepository` → `DriftNoteRepository(appDatabaseProvider)`
+
+#### 5. 标签/搜索 Provider 适配 AsyncValue
+
+##### 标签 Provider (`lib/features/notes/providers/tags_provider.dart`)
+- `allTagsProvider`: 返回类型 `List<TagInfo>` → `AsyncValue<List<TagInfo>>`，使用 `whenData` 转换
+- `filteredNotesProvider`: 返回类型 `List<NoteModel>` → `AsyncValue<List<NoteModel>>`，使用 `whenData` 过滤
+- `SelectedTagsNotifier`: 保持同步（不依赖数据库）
+
+##### 搜索 Provider (`lib/features/search/providers/search_provider.dart`)
+- `searchResultsProvider`: 返回类型 `List<NoteModel>` → `AsyncValue<List<NoteModel>>`，使用 `whenData` 过滤
+- `SearchHistoryNotifier`: 保持同步（不依赖数据库）
+
+#### 6. UI 页面适配异步状态
+
+##### 笔记列表页 (`notes_list_page.dart`)
+- `filteredNotesProvider` / `notesProvider` / `allTagsProvider` 均返回 `AsyncValue`
+- 三态渲染: `loading` → CircularProgressIndicator, `error` → 错误重试空状态, `data` → 笔记列表
+- 标签栏: `allTagsProvider.maybeWhen` 判断是否有标签
+- 删除操作: `ref.read(notesProvider.notifier).deleteNote()` 返回 Future（fire-and-forget）
+
+##### 编辑器页 (`note_editor_page.dart`)
+- `initState`: 异步调用 `getNoteById()` 加载笔记，新增 `_isLoading` / `_isSaving` 状态
+- `_loadNote()`: 异步加载完成后填充控制器和状态
+- `_save()`: 改为 `async`，等待 `addNote` / `updateNote` 完成后再 pop
+- 保存按钮: `_isSaving` 时禁用（`onPressed: null`）
+
+##### 标签过滤栏 (`tag_filter_bar.dart`)
+- `allTagsProvider` 返回 `AsyncValue`，使用 `.when()` 三态处理
+- loading/error 时返回 `SizedBox.shrink()`（不显示标签栏）
+
+##### 搜索页 (`search_page.dart`)
+- `searchResultsProvider` 返回 `AsyncValue`，使用 `.when()` 三态处理
+- 搜索中显示加载指示器，出错显示错误空状态
+
+#### 7. 测试适配
+- `test/widget_test.dart`: 添加 `appDatabaseProvider` override 为 `AppDatabase.forTesting()`
+- `driftRuntimeOptions.dontWarnAboutMultipleDatabases = true` 抑制测试中多数据库实例警告
+- 6 项测试全部通过，种子数据从 drift 数据库加载
+
+### 验证结果
+- `flutter analyze`: No issues found (0 errors, 0 warnings)
+- `flutter test`: All tests passed! (6 tests)
+
+### 技术决策
+- `AsyncNotifier` vs `StreamNotifier`: 选择 `AsyncNotifier` + `ref.invalidateSelf()` 方案，简洁直观；`watchAllNotes()` Stream 保留在 Repository 接口供未来响应式更新使用
+- `whenData` 转换: 派生 Provider（标签、搜索、过滤）使用 `AsyncValue.whenData()` 链式转换，自动传递 loading/error 状态
+- `Constant` vs `Value`: drift 中 `Constant` 是 SQL 表达式（用于列默认值），`Value` 是伴生对象参数类型，种子数据必须使用 `Value`
+- 内存数据库测试: `AppDatabase.forTesting()` + `NativeDatabase.memory()` 实现 SQLite 内存模式，每个测试独立隔离
+- Fire-and-forget 删除: `deleteNote` 返回 Future 但 UI 不 await，Snackbar 撤销通过 `addNote` 恢复，`invalidateSelf` 最终保证一致性
+
+### Git 提交记录
+```
+(commit hash pending)
+```
+
+### 明日计划 (Week 1 Day 5)
+- 加密存储集成 (AES-256 + encrypt 包)
+- shared_preferences 持久化设置 (主题模式等)
+- 数据库 Repository 单元测试

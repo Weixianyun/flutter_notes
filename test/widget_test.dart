@@ -1,25 +1,45 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:drift/drift.dart';
 
 import 'package:flutter_notes/app.dart';
+import 'package:flutter_notes/data/database/app_database.dart';
+import 'package:flutter_notes/data/database/database_provider.dart';
 
 void main() {
-  testWidgets('Notes list renders with title, FAB and tag filter', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: FlutterNotesApp()));
+  // 测试中每个 testWidgets 创建独立的内存数据库，抑制多重数据库警告
+  driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
+
+  /// 测试用 override 列表，使用内存数据库
+  List<Override> testOverrides() => [
+        appDatabaseProvider.overrideWithValue(AppDatabase.forTesting()),
+      ];
+
+  Future<void> pumpApp(WidgetTester tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: testOverrides(),
+        child: const FlutterNotesApp(),
+      ),
+    );
+    // 等待数据库初始化和种子数据加载
     await tester.pumpAndSettle();
+  }
+
+  testWidgets('Notes list renders with title, FAB and tag filter', (tester) async {
+    await pumpApp(tester);
 
     expect(find.text('Flutter Notes'), findsOneWidget);
     expect(find.byIcon(Icons.add), findsOneWidget);
-    // Mock 数据应渲染笔记卡片
+    // 数据库种子数据应渲染笔记卡片
     expect(find.byType(Dismissible), findsWidgets);
-    // 标签过滤栏应出现（Mock 数据含标签）
+    // 标签过滤栏应出现（种子数据含标签）
     expect(find.byType(FilterChip), findsWidgets);
   });
 
   testWidgets('Tapping FAB opens editor page', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: FlutterNotesApp()));
-    await tester.pumpAndSettle();
+    await pumpApp(tester);
 
     await tester.tap(find.byType(FloatingActionButton));
     await tester.pumpAndSettle();
@@ -29,8 +49,7 @@ void main() {
   });
 
   testWidgets('Editor preview toggle switches to Markdown view', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: FlutterNotesApp()));
-    await tester.pumpAndSettle();
+    await pumpApp(tester);
 
     await tester.tap(find.byType(FloatingActionButton));
     await tester.pumpAndSettle();
@@ -47,8 +66,7 @@ void main() {
   });
 
   testWidgets('Search page shows search bar and empty state', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: FlutterNotesApp()));
-    await tester.pumpAndSettle();
+    await pumpApp(tester);
 
     // 点击搜索按钮进入搜索页
     await tester.tap(find.byIcon(Icons.search).first);
@@ -61,8 +79,7 @@ void main() {
   });
 
   testWidgets('Search filters notes by query', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: FlutterNotesApp()));
-    await tester.pumpAndSettle();
+    await pumpApp(tester);
 
     // 进入搜索页
     await tester.tap(find.byIcon(Icons.search).first);
@@ -77,8 +94,7 @@ void main() {
   });
 
   testWidgets('Settings page shows theme mode selector', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: FlutterNotesApp()));
-    await tester.pumpAndSettle();
+    await pumpApp(tester);
 
     // 点击更多按钮进入设置页
     await tester.tap(find.byIcon(Icons.more_vert));

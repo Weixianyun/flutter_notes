@@ -6,21 +6,21 @@ import 'notes_provider.dart';
 /// 全部标签集合
 ///
 /// 监听 [notesProvider]，从所有笔记中提取去重标签，
-/// 按使用频率降序排列。
-final allTagsProvider = Provider<List<TagInfo>>((ref) {
-  final notes = ref.watch(notesProvider);
-  final tagCount = <String, int>{};
-
-  for (final note in notes) {
-    for (final tag in note.tags) {
-      tagCount[tag] = (tagCount[tag] ?? 0) + 1;
+/// 按使用频率降序排列。返回 [AsyncValue] 以适配异步笔记加载。
+final allTagsProvider = Provider<AsyncValue<List<TagInfo>>>((ref) {
+  final notesAsync = ref.watch(notesProvider);
+  return notesAsync.whenData((notes) {
+    final tagCount = <String, int>{};
+    for (final note in notes) {
+      for (final tag in note.tags) {
+        tagCount[tag] = (tagCount[tag] ?? 0) + 1;
+      }
     }
-  }
-
-  return tagCount.entries
-      .map((e) => TagInfo(name: e.key, count: e.value))
-      .toList()
-    ..sort((a, b) => b.count.compareTo(a.count));
+    return tagCount.entries
+        .map((e) => TagInfo(name: e.key, count: e.value))
+        .toList()
+      ..sort((a, b) => b.count.compareTo(a.count));
+  });
 });
 
 /// 选中标签状态管理
@@ -60,15 +60,17 @@ final selectedTagsProvider =
 /// 按标签过滤的笔记列表
 ///
 /// 若无选中标签，返回全部笔记；否则返回包含任一选中标签的笔记。
-final filteredNotesProvider = Provider<List<NoteModel>>((ref) {
-  final notes = ref.watch(notesProvider);
+/// 返回 [AsyncValue] 以适配异步笔记加载。
+final filteredNotesProvider = Provider<AsyncValue<List<NoteModel>>>((ref) {
+  final notesAsync = ref.watch(notesProvider);
   final selectedTags = ref.watch(selectedTagsProvider);
 
-  if (selectedTags.isEmpty) return notes;
-
-  return notes
-      .where((note) => note.tags.any((t) => selectedTags.contains(t)))
-      .toList();
+  return notesAsync.whenData((notes) {
+    if (selectedTags.isEmpty) return notes;
+    return notes
+        .where((note) => note.tags.any((t) => selectedTags.contains(t)))
+        .toList();
+  });
 });
 
 /// 标签信息

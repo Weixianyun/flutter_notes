@@ -1,61 +1,62 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../data/database/database_provider.dart';
 import '../../../data/models/note_model.dart';
 import '../../../data/repositories/note_repository.dart';
 
 /// 笔记仓库 Provider
 ///
-/// 暴露 [NoteRepository] 实例，当前返回 [MockNoteRepository]。
-/// Week 2 接入 drift 后替换为数据库实现。
+/// 暴露 [NoteRepository] 实例，使用基于 drift 的 [DriftNoteRepository]。
+/// 测试时可通过 override 替换为 [MockNoteRepository]。
 final noteRepositoryProvider = Provider<NoteRepository>((ref) {
-  return MockNoteRepository();
+  final db = ref.watch(appDatabaseProvider);
+  return DriftNoteRepository(db);
 });
 
 /// 笔记列表状态管理
 ///
-/// 使用 Riverpod 2.x [Notifier] 管理笔记列表的增删改查。
-/// 所有变更同步写入 [NoteRepository]，确保数据一致性。
-class NotesNotifier extends Notifier<List<NoteModel>> {
-  late final NoteRepository _repository;
-
+/// 使用 Riverpod 2.x [AsyncNotifier] 管理笔记列表的增删改查。
+/// 所有变更异步写入 [NoteRepository]，通过 [ref.invalidateSelf] 刷新状态。
+class NotesNotifier extends AsyncNotifier<List<NoteModel>> {
   @override
-  List<NoteModel> build() {
-    _repository = ref.read(noteRepositoryProvider);
-    return _repository.getAllNotes();
+  Future<List<NoteModel>> build() async {
+    final repository = ref.read(noteRepositoryProvider);
+    return repository.getAllNotes();
   }
 
   /// 新增笔记
-  void addNote(NoteModel note) {
-    _repository.addNote(note);
-    state = [note, ...state];
+  Future<void> addNote(NoteModel note) async {
+    final repository = ref.read(noteRepositoryProvider);
+    await repository.addNote(note);
+    ref.invalidateSelf();
   }
 
   /// 更新笔记
-  void updateNote(NoteModel note) {
-    _repository.updateNote(note);
-    state = [
-      for (final n in state)
-        if (n.id == note.id) note else n,
-    ];
+  Future<void> updateNote(NoteModel note) async {
+    final repository = ref.read(noteRepositoryProvider);
+    await repository.updateNote(note);
+    ref.invalidateSelf();
   }
 
   /// 删除笔记
-  void deleteNote(String id) {
-    _repository.deleteNote(id);
-    state = state.where((n) => n.id != id).toList();
+  Future<void> deleteNote(String id) async {
+    final repository = ref.read(noteRepositoryProvider);
+    await repository.deleteNote(id);
+    ref.invalidateSelf();
   }
 
   /// 根据 ID 获取笔记
-  NoteModel? getNoteById(String id) {
-    return _repository.getNoteById(id);
+  Future<NoteModel?> getNoteById(String id) async {
+    final repository = ref.read(noteRepositoryProvider);
+    return repository.getNoteById(id);
   }
 
   /// 刷新列表（从仓库重新加载）
-  void refresh() {
-    state = _repository.getAllNotes();
+  Future<void> refresh() async {
+    ref.invalidateSelf();
   }
 }
 
 /// 笔记列表 Provider
 final notesProvider =
-    NotifierProvider<NotesNotifier, List<NoteModel>>(NotesNotifier.new);
+    AsyncNotifierProvider<NotesNotifier, List<NoteModel>>(NotesNotifier.new);

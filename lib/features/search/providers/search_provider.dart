@@ -10,20 +10,22 @@ final searchQueryProvider = StateProvider<String>((ref) => '');
 ///
 /// 监听 [notesProvider] 和 [searchQueryProvider]，
 /// 按标题、内容、标签模糊匹配过滤。
-final searchResultsProvider = Provider<List<NoteModel>>((ref) {
+/// 返回 [AsyncValue] 以适配异步笔记加载。
+final searchResultsProvider = Provider<AsyncValue<List<NoteModel>>>((ref) {
   final query = ref.watch(searchQueryProvider).trim().toLowerCase();
-  final notes = ref.watch(notesProvider);
+  final notesAsync = ref.watch(notesProvider);
 
-  if (query.isEmpty) return [];
-
-  return notes.where((note) {
-    final title = note.title.toLowerCase();
-    final content = note.content.toLowerCase();
-    final tags = note.tags.map((t) => t.toLowerCase()).join(' ');
-    return title.contains(query) ||
-        content.contains(query) ||
-        tags.contains(query);
-  }).toList();
+  return notesAsync.whenData((notes) {
+    if (query.isEmpty) return <NoteModel>[];
+    return notes.where((note) {
+      final title = note.title.toLowerCase();
+      final content = note.content.toLowerCase();
+      final tags = note.tags.map((t) => t.toLowerCase()).join(' ');
+      return title.contains(query) ||
+          content.contains(query) ||
+          tags.contains(query);
+    }).toList();
+  });
 });
 
 /// 搜索历史状态管理

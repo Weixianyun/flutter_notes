@@ -68,7 +68,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   @override
   Widget build(BuildContext context) {
     final query = ref.watch(searchQueryProvider);
-    final results = ref.watch(searchResultsProvider);
+    final resultsAsync = ref.watch(searchResultsProvider);
     final history = ref.watch(searchHistoryProvider);
 
     return Scaffold(
@@ -86,9 +86,18 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       ),
       body: query.isEmpty
           ? _buildHistoryView(history)
-          : results.isEmpty
-              ? _buildNoResults()
-              : _buildResults(results),
+          : resultsAsync.when(
+              loading: () =>
+                  const Center(child: CircularProgressIndicator()),
+              error: (error, _) => EmptyState(
+                icon: Icons.error_outline,
+                title: '搜索失败',
+                subtitle: '出错：$error',
+              ),
+              data: (results) => results.isEmpty
+                  ? _buildNoResults()
+                  : _buildResults(results),
+            ),
     );
   }
 

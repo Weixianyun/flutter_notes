@@ -19,9 +19,14 @@ class NotesListPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final notes = ref.watch(filteredNotesProvider);
-    final allNotes = ref.watch(notesProvider);
-    final hasTags = ref.watch(allTagsProvider).isNotEmpty;
+    final notesAsync = ref.watch(filteredNotesProvider);
+    final allNotesAsync = ref.watch(notesProvider);
+    final tagsAsync = ref.watch(allTagsProvider);
+
+    final hasTags = tagsAsync.maybeWhen(
+      data: (tags) => tags.isNotEmpty,
+      orElse: () => false,
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -46,11 +51,24 @@ class NotesListPage extends ConsumerWidget {
           if (hasTags) const TagFilterBar(),
           // 笔记列表
           Expanded(
-            child: allNotes.isEmpty
-                ? _buildEmptyState(context, ref)
-                : notes.isEmpty
-                    ? _buildNoFilteredNotes(context, ref)
-                    : _buildNotesList(context, ref, notes),
+            child: allNotesAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, _) => _buildErrorState(context, ref, error),
+              data: (allNotes) {
+                if (allNotes.isEmpty) {
+                  return _buildEmptyState(context, ref);
+                }
+                return notesAsync.when(
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (error, _) =>
+                      _buildErrorState(context, ref, error),
+                  data: (notes) => notes.isEmpty
+                      ? _buildNoFilteredNotes(context, ref)
+                      : _buildNotesList(context, ref, notes),
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -118,6 +136,20 @@ class NotesListPage extends ConsumerWidget {
       subtitle: '当前标签筛选下没有笔记，试试其他标签',
       actionLabel: '清除筛选',
       onAction: () => ref.read(selectedTagsProvider.notifier).clear(),
+    );
+  }
+
+  Widget _buildErrorState(
+    BuildContext context,
+    WidgetRef ref,
+    Object error,
+  ) {
+    return EmptyState(
+      icon: Icons.error_outline,
+      title: '加载失败',
+      subtitle: '数据加载出错：$error',
+      actionLabel: '重试',
+      onAction: () => ref.invalidate(notesProvider),
     );
   }
 

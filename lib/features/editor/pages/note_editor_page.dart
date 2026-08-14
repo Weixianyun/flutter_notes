@@ -29,22 +29,46 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
   late final bool _isEditing;
   bool _hasChanges = false;
   bool _isSaved = false;
+  bool _isLoading = false;
+  bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
-    final note = widget.noteId != null
-        ? ref.read(notesProvider.notifier).getNoteById(widget.noteId!)
-        : null;
+    _titleController = TextEditingController();
+    _contentController = TextEditingController();
 
-    _isEditing = note != null;
-    _titleController = TextEditingController(text: note?.title ?? '');
-    _contentController = TextEditingController(text: note?.content ?? '');
-    _priority = note?.priority ?? NotePriority.medium;
-    _tags = List.from(note?.tags ?? []);
+    if (widget.noteId != null) {
+      _isLoading = true;
+      _isEditing = true;
+      _priority = NotePriority.medium;
+      _tags = [];
+      _loadNote();
+    } else {
+      _isEditing = false;
+      _priority = NotePriority.medium;
+      _tags = [];
+    }
 
     _titleController.addListener(_markChanged);
     _contentController.addListener(_markChanged);
+  }
+
+  Future<void> _loadNote() async {
+    final note = await ref.read(notesProvider.notifier).getNoteById(
+          widget.noteId!,
+        );
+    if (note != null && mounted) {
+      _titleController.text = note.title;
+      _contentController.text = note.content;
+      setState(() {
+        _priority = note.priority;
+        _tags = List.from(note.tags);
+        _isLoading = false;
+      });
+    } else if (mounted) {
+      setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -62,6 +86,13 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
   Widget build(BuildContext context) {
     final isPreview = ref.watch(previewModeProvider);
     final colorScheme = Theme.of(context).colorScheme;
+
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('加载中...')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return PopScope(
       canPop: !_hasChanges || _isSaved,
@@ -82,7 +113,7 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
             IconButton(
               icon: const Icon(Icons.check),
               tooltip: '保存',
-              onPressed: _save,
+              onPressed: _isSaving ? null : _save,
             ),
           ],
         ),
@@ -208,7 +239,7 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
 
   // ── 保存 ──
 
-  void _save() {
+  Future<void> _save() async {
     final title = _titleController.text.trim();
     final content = _contentController.text.trim();
 
@@ -219,6 +250,8 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
       return;
     }
 
+    setState(() => _isSaving = true);
+
     final note = NoteModel(
       id: widget.noteId,
       title: title,
@@ -228,14 +261,17 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
     );
 
     if (_isEditing) {
-      ref.read(notesProvider.notifier).updateNote(note);
+      await ref.read(notesProvider.notifier).updateNote(note);
     } else {
-      ref.read(notesProvider.notifier).addNote(note);
+      await ref.read(notesProvider.notifier).addNote(note);
     }
+
+    if (!mounted) return;
 
     setState(() {
       _hasChanges = false;
       _isSaved = true;
+      _isSaving = false;
     });
 
     ScaffoldMessenger.of(context).showSnackBar(

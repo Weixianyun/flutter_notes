@@ -1,30 +1,127 @@
+import 'dart:convert';
+
+import 'package:drift/drift.dart';
+
+import '../database/app_database.dart';
 import '../models/note_model.dart';
 
 /// 笔记数据仓库抽象接口
 ///
-/// 定义笔记 CRUD 操作契约。当前由 [MockNoteRepository] 实现，
-/// Week 2 接入 drift 数据库后替换为 [DriftNoteRepository]。
+/// 定义笔记 CRUD 操作契约。所有方法均为异步，
+/// 由 [DriftNoteRepository] 基于 drift 数据库实现。
 abstract class NoteRepository {
   /// 获取全部笔记（按更新时间倒序）
-  List<NoteModel> getAllNotes();
+  Future<List<NoteModel>> getAllNotes();
 
   /// 根据 ID 获取单条笔记
-  NoteModel? getNoteById(String id);
+  Future<NoteModel?> getNoteById(String id);
 
   /// 新增笔记，返回带生成 ID 的笔记
-  NoteModel addNote(NoteModel note);
+  Future<NoteModel> addNote(NoteModel note);
 
   /// 更新笔记
-  void updateNote(NoteModel note);
+  Future<void> updateNote(NoteModel note);
 
   /// 删除笔记
-  void deleteNote(String id);
+  Future<void> deleteNote(String id);
+
+  /// 监听全部笔记变化（按更新时间倒序）
+  Stream<List<NoteModel>> watchAllNotes();
 }
 
-/// Mock 笔记仓库（内存存储）
+/// drift 笔记仓库实现
+///
+/// 基于 [AppDatabase] 实现持久化存储，将数据库实体 [Note]
+/// 与领域模型 [NoteModel] 互相转换。
+class DriftNoteRepository implements NoteRepository {
+  DriftNoteRepository(this._db);
+
+  final AppDatabase _db;
+
+  // ── 实体转换 ──
+
+  NoteModel _toModel(Note row) {
+    return NoteModel(
+      id: row.id,
+      title: row.title,
+      content: row.content,
+      priority: NotePriority.values.firstWhere(
+        (e) => e.name == row.priority,
+        orElse: () => NotePriority.medium,
+      ),
+      status: NoteStatus.values.firstWhere(
+        (e) => e.name == row.status,
+        orElse: () => NoteStatus.draft,
+      ),
+      tags: (jsonDecode(row.tags) as List<dynamic>)
+          .map((e) => e as String)
+          .toList(),
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    );
+  }
+
+  NotesCompanion _toCompanion(NoteModel note) {
+    return NotesCompanion(
+      id: Value(note.id),
+      title: Value(note.title),
+      content: Value(note.content),
+      priority: Value(note.priority.name),
+      status: Value(note.status.name),
+      tags: Value(jsonEncode(note.tags)),
+      createdAt: Value(note.createdAt),
+      updatedAt: Value(note.updatedAt),
+    );
+  }
+
+  // ── CRUD ──
+
+  @override
+  Future<List<NoteModel>> getAllNotes() async {
+    final rows = await (_db.select(_db.notes)
+          ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)]))
+        .get();
+    return rows.map(_toModel).toList();
+  }
+
+  @override
+  Future<NoteModel?> getNoteById(String id) async {
+    final row = await (_db.select(_db.notes)
+          ..where((t) => t.id.equals(id)))
+        .getSingleOrNull();
+    return row != null ? _toModel(row) : null;
+  }
+
+  @override
+  Future<NoteModel> addNote(NoteModel note) async {
+    await _db.into(_db.notes).insert(_toCompanion(note));
+    return note;
+  }
+
+  @override
+  Future<void> updateNote(NoteModel note) async {
+    await (_db.update(_db.notes)..where((t) => t.id.equals(note.id)))
+        .write(_toCompanion(note));
+  }
+
+  @override
+  Future<void> deleteNote(String id) async {
+    await (_db.delete(_db.notes)..where((t) => t.id.equals(id))).go();
+  }
+
+  @override
+  Stream<List<NoteModel>> watchAllNotes() {
+    return (_db.select(_db.notes)
+          ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)]))
+        .watch()
+        .map((rows) => rows.map(_toModel).toList());
+  }
+}
+
+/// Mock 笔记仓库（内存存储，异步兼容）
 ///
 /// 使用静态列表模拟数据库，应用重启后数据重置。
-/// Week 2 将替换为基于 drift 的持久化实现。
+/// 主要用于测试和快速原型验证。
 class MockNoteRepository implements NoteRepository {
   MockNoteRepository() : _notes = List.from(_seedData);
 
@@ -51,11 +148,9 @@ class MockNoteRepository implements NoteRepository {
           '- **NotifierProvider**：可变状态（推荐）\n'
           '- **FutureProvider**：异步状态\n'
           '- **StreamProvider**：流式状态\n\n'
-          '```dart\n'
-          'class CounterNotifier extends Notifier<int> {\n'
+          '```dart\nclass CounterNotifier extends Notifier<int> {\n'
           '  @override\n  int build() => 0;\n\n'
-          '  void increment() => state++;\n'
-          '}\n```',
+          '  void increment() => state++;\n}\n```',
       priority: NotePriority.medium,
       tags: ['Riverpod', '状态管理'],
     ),
@@ -100,14 +195,14 @@ class MockNoteRepository implements NoteRepository {
   final List<NoteModel> _notes;
 
   @override
-  List<NoteModel> getAllNotes() {
+  Future<List<NoteModel>> getAllNotes() async {
     return List.from(
       _notes..sort((a, b) => b.updatedAt.compareTo(a.updatedAt)),
     );
   }
 
   @override
-  NoteModel? getNoteById(String id) {
+  Future<NoteModel?> getNoteById(String id) async {
     for (final note in _notes) {
       if (note.id == id) return note;
     }
@@ -115,13 +210,13 @@ class MockNoteRepository implements NoteRepository {
   }
 
   @override
-  NoteModel addNote(NoteModel note) {
+  Future<NoteModel> addNote(NoteModel note) async {
     _notes.add(note);
     return note;
   }
 
   @override
-  void updateNote(NoteModel note) {
+  Future<void> updateNote(NoteModel note) async {
     final index = _notes.indexWhere((n) => n.id == note.id);
     if (index != -1) {
       _notes[index] = note;
@@ -129,7 +224,12 @@ class MockNoteRepository implements NoteRepository {
   }
 
   @override
-  void deleteNote(String id) {
+  Future<void> deleteNote(String id) async {
     _notes.removeWhere((n) => n.id == id);
+  }
+
+  @override
+  Stream<List<NoteModel>> watchAllNotes() async* {
+    yield await getAllNotes();
   }
 }
