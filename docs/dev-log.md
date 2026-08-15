@@ -862,7 +862,7 @@ b5b69f5 feat: Week 1 Day 3 - search, tag management, settings page
 
 ### Git 提交记录
 ```
-(commit hash pending)
+504e35b feat: Week 2 Day 4 - graph interaction, note export, app icon and splash screen
 ```
 
 ### 明日计划 (Week 2 Day 5)
