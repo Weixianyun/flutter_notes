@@ -621,7 +621,7 @@ b5b69f5 feat: Week 1 Day 3 - search, tag management, settings page
 
 ### Git 提交记录
 ```
-(commit hash pending)
+6b1ed7e feat: Week 2 Day 1-2 - GitHub OAuth, note sync, import, conflict handling, and 46 new tests
 ```
 
 ## 2026-08-15 | Week 2 Day 2 — 同步测试 + 笔记导入 + 冲突处理
@@ -702,7 +702,7 @@ b5b69f5 feat: Week 1 Day 3 - search, tag management, settings page
 
 ### Git 提交记录
 ```
-(commit hash pending)
+6b1ed7e feat: Week 2 Day 1-2 - GitHub OAuth, note sync, import, conflict handling, and 46 new tests
 ```
 
 ### 明日计划 (Week 2 Day 3)
