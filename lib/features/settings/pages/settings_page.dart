@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/router/app_router.dart';
 import '../../notes/providers/notes_provider.dart';
 import '../providers/settings_provider.dart';
 
@@ -60,7 +61,7 @@ class SettingsPage extends ConsumerWidget {
             title: const Text('GitHub 同步'),
             subtitle: const Text('将笔记同步到 GitHub 仓库'),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => _showSyncInfo(context),
+            onTap: () => Navigator.pushNamed(context, AppRouter.syncSettings),
           ),
           ListTile(
             leading: Icon(
@@ -143,25 +144,6 @@ class SettingsPage extends ConsumerWidget {
       ThemeMode.dark => '深色模式',
       ThemeMode.system => '跟随系统',
     };
-  }
-
-  void _showSyncInfo(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('GitHub 同步'),
-        content: const Text(
-          '通过 GitHub OAuth 认证后，可将笔记自动同步到指定的 '
-          'GitHub 仓库。\n\n此功能将在后续版本中实现。',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('知道了'),
-          ),
-        ],
-      ),
-    );
   }
 
   void _showEncryptionInfo(BuildContext context, bool isEncrypted) {

@@ -549,3 +549,163 @@ b5b69f5 feat: Week 1 Day 3 - search, tag management, settings page
 - GitHub OAuth 认证流程实现
 - WebView 授权页 + authorization_code 获取
 - access_token 换取 + 加密存储
+
+## 2026-08-15 | Week 2 Day 1 — GitHub OAuth 认证 + 笔记同步
+
+### 今日完成
+
+#### 1. GitHub OAuth 配置 (`lib/core/config/github_config.dart`)
+- OAuth App 配置: Client ID / Client Secret / Redirect URI / Scope
+- 授权 URL 构建: `https://github.com/login/oauth/authorize?client_id=...&scope=repo`
+- Token 交换端点: `https://github.com/login/oauth/access_token`
+- API 基础地址: `https://api.github.com`
+- ⚠️ 安全警告: client_secret 嵌入客户端代码，生产环境应使用后端中转
+
+#### 2. GitHub 服务 (`lib/services/github_service.dart`)
+- OAuth 流程: `exchangeCodeForToken(code)` — POST 到 token 端点交换 access_token
+- Token 加解密: `encryptToken(token)` / `decryptToken(encrypted)` — 委托 EncryptionService
+- GitHub API 封装:
+  - `getUser(token)` — 获取已认证用户信息（login, name, avatar_url）
+  - `listRepos(token)` — 列出用户仓库（按更新时间排序）
+  - `createRepo(token, name)` — 创建新仓库（默认私有 + auto_init）
+  - `createOrUpdateFile(...)` — 创建/更新文件（支持 sha 更新已有文件）
+  - `getFile(...)` — 获取文件内容 + SHA（404 返回 null）
+  - `deleteFile(...)` — 删除文件（需提供 sha）
+- 请求头: `Authorization: Bearer`, `Accept: application/vnd.github+json`, `X-GitHub-Api-Version: 2022-11-28`
+
+#### 3. 同步服务 (`lib/services/sync_service.dart`)
+- `pushNote(...)` — 推送单条笔记到 `notes/{slug}.md`（含 YAML front matter）
+- `pushAllNotes(...)` — 批量推送所有笔记，返回 `SyncResult`（成功/失败计数 + 错误列表）
+- 笔记转 Markdown: YAML front matter（id/title/priority/status/tags/created_at/updated_at）+ 正文
+- 文件名 slug: 支持中文，过滤特殊字符，截断 50 字符
+
+#### 4. 同步状态管理 (`lib/features/sync/providers/sync_provider.dart`)
+- `SyncState`: status（idle/syncing/success/error）/ user / lastSyncTime / message
+- `SyncNotifier`:
+  - `saveToken(token)` — 加密存储 token + 获取用户信息
+  - `logout()` — 清除 token + 仓库配置 + 用户信息
+  - `fetchUser()` — 获取 GitHub 用户信息
+  - `syncAllNotes()` — 批量推送笔记，更新同步状态
+  - `setSyncRepo(owner, repo)` — 配置同步仓库
+- `isGitHubLoggedInProvider` — 布尔值判断登录状态
+- `syncServiceProvider` — 依赖有效 token，未登录返回 null
+
+#### 5. WebView OAuth 登录页 (`lib/features/sync/pages/github_login_page.dart`)
+- `webview_flutter` 加载 GitHub 授权 URL
+- `NavigationDelegate.onNavigationRequest` 拦截回调 URL
+- 提取 `code` 参数 → `exchangeCodeForToken` → `saveToken`
+- 三态 UI: 加载中（LinearProgressIndicator）/ 交换中（遮罩 + 圆形进度）/ 错误（重试按钮）
+
+#### 6. 同步设置页 (`lib/features/sync/pages/sync_settings_page.dart`)
+- 账户区域: 已登录显示头像 + 用户名 + 退出按钮；未登录显示登录入口
+- 仓库配置: owner/repo 输入框 + 保存按钮
+- 同步操作: 上次同步时间 + 状态消息卡片 + 立即同步按钮
+- 状态消息: 成功（primaryContainer）/ 失败（errorContainer）/ 同步中（surface）
+
+#### 7. Provider 与路由集成
+- `service_providers.dart`: 新增 `githubServiceProvider` / `githubTokenProvider` / `syncServiceProvider`
+- `preferences_service.dart`: 新增 token 加密存储 + 仓库配置 + `clearSyncConfig()`
+- `app_router.dart`: 新增 `/github-login` 和 `/sync-settings` 路由
+- `settings_page.dart`: "GitHub 同步" 入口从弹窗改为跳转同步设置页
+- `AndroidManifest.xml`: 添加 `INTERNET` 权限 + `usesCleartextTraffic`
+
+### 验证结果
+- `flutter analyze`: No issues found
+- `flutter test`: All tests passed! (40 tests)
+
+### 技术决策
+- **WebView 拦截方案**: 使用 `NavigationDelegate.onNavigationRequest` 拦截 redirect URL，避免自定义 URL scheme 注册复杂性
+- **Token 加密存储**: access_token 通过 `EncryptionService.encrypt()` 加密后存储在 SharedPreferences，解密在 `githubTokenProvider` 中按需进行
+- **SyncService 设计**: 每条笔记作为独立 Markdown 文件（含 YAML front matter），支持增量更新（通过 sha 检测已有文件）
+- **StateNotifier vs AsyncNotifier**: 同步状态使用 `StateNotifier<SyncState>` 而非 `AsyncNotifier`，因为同步操作需要展示进度和错误消息，不适合简单的 `AsyncValue` 三态
+
+### Git 提交记录
+```
+(commit hash pending)
+```
+
+## 2026-08-15 | Week 2 Day 2 — 同步测试 + 笔记导入 + 冲突处理
+
+### 今日完成
+
+#### 1. GitHubService 可测试性重构
+- 构造函数新增可选参数 `http.Client`，默认创建 `http.Client()`
+- 所有 `http.get/post/put/delete` 替换为 `_client.get/post/put/delete`
+- Provider 层无需修改，`githubServiceProvider` 仍创建默认实例
+- 测试时注入 `MockClient`（`package:http/testing.dart`）实现 HTTP 模拟
+
+#### 2. GitHubService 单元测试 (`test/services/github_service_test.dart`)
+##### 测试覆盖 (22 项)
+- **exchangeCodeForToken**: 成功返回 token / HTTP 错误抛异常 / access_token 缺失抛异常
+- **encryptToken/decryptToken**: 加解密往返 / 密文不同于明文
+- **getUser**: 成功解析用户信息 / HTTP 错误抛异常 / 缺失字段使用默认值
+- **listRepos**: 返回仓库列表 / 空仓库返回空列表
+- **createRepo**: 成功返回创建的仓库 / 非 201 状态抛异常
+- **createOrUpdateFile**: Base64 编码验证 / sha 更新已有文件 / 错误响应抛异常
+- **getFile**: 文件存在返回内容+sha / 404 返回 null / Base64 含换行符正确解码
+- **deleteFile**: 发送 DELETE + sha / 错误抛异常
+- **listFiles**: 列出目录文件（过滤目录）/ 404 返回空列表
+
+#### 3. SyncService 单元测试 (`test/services/sync_service_test.dart`)
+##### 测试覆盖 (24 项)
+- **noteToMarkdown**: YAML front matter 完整性 / 空内容占位符
+- **slugify**: 空格转连字符 / 移除特殊字符 / 小写转换 / 保留中文 / 50 字符截断
+- **pushNote**: 新文件创建（无 sha）/ 已有文件更新（含 sha）/ 空标题用 id 做文件名
+- **pushAllNotes**: 全部成功 / 全部失败收集错误 / 部分成功
+- **pullNotes**: 远程笔记解析 / 空目录 / 跳过非 Markdown 文件
+- **syncWithConflictCheck**: 远程不存在→推送 / 本地较新→推送 / 远程较新+skip→跳过 / 远程较新+localWins→推送 / 时间相同→跳过
+- **SyncResult**: isSuccess / failed / skipped 逻辑
+
+#### 4. 笔记导入功能
+##### GitHubService 扩展
+- 新增 `GitHubFile` 数据类（name/path/sha/size）
+- 新增 `listFiles(...)` — 列出仓库目录文件，404 返回空列表
+##### SyncService 扩展
+- `pullNotes(...)` — 列出 `notes/` 目录下 `.md` 文件，逐个下载并解析为 `NoteModel`
+- `_markdownToNote(String)` — 解析 YAML front matter（id/title/priority/status/tags/created_at/updated_at）+ 正文内容
+- `noteToMarkdown(...)` / `slugify(...)` — 从私有方法改为公开方法，便于测试
+##### SyncNotifier 扩展
+- `importNotes()` — 拉取远程笔记 → 写入本地数据库 → 更新同步状态
+##### UI 集成
+- `sync_settings_page.dart` 新增"导入笔记"按钮（下载图标 + 从 GitHub 拉取描述）
+
+#### 5. 冲突处理策略
+##### 设计
+- `ConflictResolution` 枚举: `localWins` / `remoteWins` / `skip`
+- `syncWithConflictCheck(...)` — 比较本地与远程笔记的 `updatedAt`:
+  - 本地较新 → 推送本地版本
+  - 远程较新 → 根据 resolution 策略处理（localWins 推送 / remoteWins 跳过 / skip 跳过）
+  - 时间相同 → 跳过（无需同步）
+  - 远程不存在 → 推送新笔记
+- `SyncResult` 新增 `skipped` 字段，区分跳过和失败
+##### export 导出
+- `sync_provider.dart` 中 `export ConflictResolution`，供 UI 层使用
+
+#### 6. Bug 修复
+- **_slugify RangeError**: 原代码用 `text.length`（原始长度）作为 substring 上限，替换特殊字符后字符串变短导致越界。改为使用处理后的 `slug.length`
+- **tags 解析含方括号**: YAML front matter 中 `tags: [a, b]` 被解析为 `['[a', 'b]']`。增加 `replaceAll(RegExp(r'[\[\]]'), '')` 去除方括号
+
+### 验证结果
+- `flutter analyze`: No issues found (0 errors, 0 warnings)
+- `flutter test`: All tests passed! (86 tests)
+  - Widget tests: 6
+  - Repository tests: 18
+  - Encryption service tests: 16
+  - GitHub service tests: 22
+  - Sync service tests: 24
+
+### 技术决策
+- **MockClient 注入**: 通过构造函数注入 `http.Client`，而非使用全局 `http.runWithClient`，保持依赖显式、测试隔离
+- **YAML front matter 解析**: 手动解析而非引入 yaml 包，front matter 结构简单固定（7 行 key: value），手动解析更轻量
+- **冲突策略粒度**: 当前为全局策略（所有冲突统一处理），后续可扩展为逐条冲突交互式选择
+- **SyncResult.skipped**: 区分"成功推送"、"跳过（无需同步）"和"失败（错误）"三种结果，提供更精确的同步反馈
+
+### Git 提交记录
+```
+(commit hash pending)
+```
+
+### 明日计划 (Week 2 Day 3)
+- GitHub OAuth App 配置替换为真实 Client ID
+- 同步功能端到端集成测试（真机/模拟器）
+- 笔记编辑器 Markdown 渲染增强（代码高亮、表格支持）

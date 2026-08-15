@@ -4,6 +4,8 @@ import '../../features/editor/pages/note_editor_page.dart';
 import '../../features/notes/pages/notes_list_page.dart';
 import '../../features/search/pages/search_page.dart';
 import '../../features/settings/pages/settings_page.dart';
+import '../../features/sync/pages/github_login_page.dart';
+import '../../features/sync/pages/sync_settings_page.dart';
 
 /// 应用路由配置
 ///
@@ -17,6 +19,8 @@ class AppRouter {
   static const String editor = '/editor';
   static const String search = '/search';
   static const String settings = '/settings';
+  static const String githubLogin = '/github-login';
+  static const String syncSettings = '/sync-settings';
 
   /// 路由表生成
   static Map<String, WidgetBuilder> get routes => {
@@ -26,6 +30,8 @@ class AppRouter {
             ),
         search: (_) => const SearchPage(),
         settings: (_) => const SettingsPage(),
+        githubLogin: (_) => const GitHubLoginPage(),
+        syncSettings: (_) => const SyncSettingsPage(),
       };
 
   /// 生成路由（支持转场动画）

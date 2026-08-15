@@ -14,6 +14,9 @@ class PreferencesService {
   static const _themeModeKey = 'theme_mode';
   static const _markdownAutoPreviewKey = 'markdown_auto_preview';
   static const _defaultPriorityKey = 'default_priority';
+  static const _encryptedTokenKey = 'github_encrypted_token';
+  static const _syncRepoOwnerKey = 'sync_repo_owner';
+  static const _syncRepoNameKey = 'sync_repo_name';
 
   // ── 主题模式 ──
 
@@ -54,5 +57,45 @@ class PreferencesService {
   /// 设置默认笔记优先级
   Future<void> setDefaultPriority(String priority) {
     return _prefs.setString(_defaultPriorityKey, priority);
+  }
+
+  // ── GitHub Token（加密存储）──
+
+  /// 获取加密的 GitHub token
+  String? getEncryptedToken() => _prefs.getString(_encryptedTokenKey);
+
+  /// 设置加密的 GitHub token
+  Future<void> setEncryptedToken(String encryptedToken) {
+    return _prefs.setString(_encryptedTokenKey, encryptedToken);
+  }
+
+  /// 清除 GitHub token
+  Future<void> clearToken() => _prefs.remove(_encryptedTokenKey);
+
+  /// 判断是否已存储 token
+  bool get hasToken => _prefs.containsKey(_encryptedTokenKey);
+
+  // ── 同步仓库配置 ──
+
+  /// 获取同步仓库 owner
+  String? getSyncRepoOwner() => _prefs.getString(_syncRepoOwnerKey);
+
+  /// 设置同步仓库 owner
+  Future<void> setSyncRepoOwner(String owner) {
+    return _prefs.setString(_syncRepoOwnerKey, owner);
+  }
+
+  /// 获取同步仓库名称
+  String? getSyncRepoName() => _prefs.getString(_syncRepoNameKey);
+
+  /// 设置同步仓库名称
+  Future<void> setSyncRepoName(String name) {
+    return _prefs.setString(_syncRepoNameKey, name);
+  }
+
+  /// 清除同步仓库配置
+  Future<void> clearSyncConfig() async {
+    await _prefs.remove(_syncRepoOwnerKey);
+    await _prefs.remove(_syncRepoNameKey);
   }
 }
