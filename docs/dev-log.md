@@ -869,3 +869,153 @@ b5b69f5 feat: Week 1 Day 3 - search, tag management, settings page
 - 笔记全文搜索增强（SQLite FTS5 全文索引）
 - 笔记回收站功能（软删除 + 恢复）
 - 应用主题色自定义（多种种子色选择）
+
+## 2026-08-15 | Week 2 Day 5 — FTS5 全文搜索 + 回收站 + 主题色自定义
+
+### 今日完成
+
+#### 1. SQLite FTS5 全文搜索增强
+
+##### 数据库 Schema 升级 (`lib/data/database/app_database.dart`)
+- schemaVersion 升级至 2，新增 `deletedAt` 列（软删除支持）
+- 创建 FTS5 虚拟表 `notes_fts`：索引 note_id（UNINDEXED）/ title / content / tags
+- 使用 `unicode61` 分词器，支持中文和 Unicode 文本
+- 三个触发器自动维护 FTS 索引：
+  - `notes_ai`（AFTER INSERT）：新增笔记时同步插入 FTS 索引
+  - `notes_ad`（AFTER DELETE）：删除笔记时同步删除 FTS 索引
+  - `notes_au`（AFTER UPDATE）：更新笔记时先删后插重建索引
+- `_populateFts()`：数据库升级时从现有笔记数据填充 FTS 索引
+
+##### 仓库层搜索实现 (`lib/data/repositories/note_repository.dart`)
+- `searchNotes(query)`：使用 `customSelect` 执行 FTS5 JOIN 查询
+- 查询 SQL：`SELECT n.* FROM notes n JOIN notes_fts f ON n.id = f.note_id WHERE notes_fts MATCH ? AND n.deleted_at IS NULL`
+- `_buildFtsQuery(input)`：构建 FTS5 兼容查询字符串
+  - 双引号转义：`"` → `""`
+  - 前缀搜索：自动添加 `*` 后缀（如 `"Dart"*` 匹配 Dart、Dartian 等）
+- 搜索结果排除已软删除的笔记
+- 使用 `row.read<T>()` 逐列读取 `QueryRow` 数据
+
+##### 搜索 Provider 迁移 (`lib/features/search/providers/search_provider.dart`)
+- `searchResultsProvider`：从客户端 `where` 过滤迁移至数据库级 FTS 搜索
+- 监听 `notesProvider` 变更自动刷新搜索结果
+
+#### 2. 笔记回收站功能（软删除 + 恢复）
+
+##### 数据模型扩展 (`lib/data/models/note_model.dart`)
+- 新增 `deletedAt`（`DateTime?`）字段，null 表示未删除
+- 更新 `fromJson` / `toJson` / `copyWith` 方法支持 `deletedAt`
+
+##### 仓库层 CRUD 扩展
+- `getDeletedNotes()`：查询 `deletedAt IS NOT NULL` 的笔记，按删除时间倒序
+- `deleteNote(id)`：改为软删除（`UPDATE ... SET deleted_at = NOW()`）
+- `restoreNote(id)`：恢复笔记（`UPDATE ... SET deleted_at = NULL`）
+- `permanentlyDeleteNote(id)`：物理删除（`DELETE FROM notes WHERE id = ?`）
+- `emptyTrash()`：清空回收站（`DELETE FROM notes WHERE deleted_at IS NOT NULL`）
+- `getAllNotes()` / `watchAllNotes()`：增加 `deletedAt.isNull()` 过滤条件
+
+##### 回收站页面 (`lib/features/notes/pages/trash_page.dart`)
+- `ConsumerStatefulWidget`，异步加载已删除笔记列表
+- 顶部信息栏：显示已删除笔记数量
+- 每张卡片显示标题、摘要、删除时间
+- 恢复按钮：调用 `restoreNote`，SnackBar 提示 + 刷新列表
+- 永久删除按钮：确认对话框 → `permanentlyDeleteNote`
+- 清空回收站：AppBar 按钮 → 确认对话框 → `emptyTrash`
+- `RefreshIndicator` 支持下拉刷新
+- 空状态：回收站为空时引导提示
+
+##### 笔记列表页修复 (`lib/features/notes/pages/notes_list_page.dart`)
+- 修复撤销删除 Bug：`addNote(note)` → `restoreNote(note.id)`（原实现会创建重复笔记）
+- 删除提示文案：「已删除」→「已移入回收站」
+- AppBar 新增回收站入口（`Icons.delete_outline`）
+
+##### 路由与设置集成
+- `app_router.dart`：新增 `/trash` 路由
+- `settings_page.dart`：数据管理区新增「回收站」入口
+
+#### 3. 应用主题色自定义
+
+##### 种子色定义 (`lib/core/theme/app_colors.dart`)
+- 新增 `SeedColorOption` 数据类（name + color）
+- 8 种预设种子色：紫色 / 蓝色 / 绿色 / 橙色 / 粉色 / 青色 / 靛蓝 / 红色
+
+##### 偏好持久化 (`lib/services/preferences_service.dart`)
+- 新增 `getSeedColor()` / `setSeedColor(int argb)` 方法
+- 存储键 `seed_color`，默认值 `0xFF6750A4`（紫色）
+
+##### 状态管理 (`lib/features/settings/providers/settings_provider.dart`)
+- 新增 `SeedColorNotifier`（`Notifier<Color>`）：读取/设置种子色
+- `seedColorProvider`：暴露当前种子色给 `app.dart` 和设置页
+
+##### 主题动态生成 (`lib/core/theme/app_theme.dart`)
+- `light` / `dark` 方法改为接受可选 `seedColor` 参数
+- 使用 `ColorScheme.fromSeed(seedColor: seedColor)` 动态生成色板
+
+##### 应用根组件 (`lib/app.dart`)
+- `ref.watch(seedColorProvider)` 获取当前种子色
+- 传递给 `AppTheme.light(seedColor: seedColor)` 和 `AppTheme.dark(seedColor: seedColor)`
+
+##### 设置页 UI (`lib/features/settings/pages/settings_page.dart`)
+- 外观区新增「主题色」ListTile：显示当前色名 + 色块预览
+- 底部弹窗颜色选择器：8 种颜色圆形按钮，选中显示勾选标记
+- `_seedColorLabel(color)`：根据 ARGB 值匹配预设色名
+
+#### 4. 测试更新
+
+##### 仓库层测试 (`test/repositories/note_repository_test.dart`)
+- 原 `deleteNote` 测试组适配软删除行为：
+  - 「removes note from active list」：验证 `getAllNotes` 不含已删除笔记
+  - 「sets deletedAt timestamp」：验证 `getNoteById` 返回 `deletedAt != null`
+  - 「soft-deleted note appears in getDeletedNotes」：验证回收站查询
+  - 「does not throw when deleting non-existent ID」：兼容性验证
+- 新增 `restoreNote` 测试组（1 项）：恢复后笔记回到活跃列表 + `deletedAt` 为 null
+- 新增 `permanentlyDeleteNote` 测试组（1 项）：物理删除后 `getNoteById` 返回 null
+- 新增 `emptyTrash` 测试组（2 项）：清空回收站 + 不影响活跃笔记
+- 新增 `searchNotes (FTS5)` 测试组（7 项）：
+  - 按标题/内容/标签关键词搜索
+  - 空查询返回空列表
+  - 无匹配返回空列表
+  - 排除已软删除笔记
+  - 前缀搜索（`"Mar"*` 匹配 Markdown）
+
+### 验证结果
+- `flutter analyze`: No issues found (0 errors, 0 warnings)
+- `flutter test`: All tests passed! (98 tests)
+  - Widget tests: 6
+  - Repository tests: 42（含 15 项新增回收站 + FTS 搜索测试）
+  - Encryption service tests: 16
+  - GitHub service tests: 22
+  - Sync service tests: 24
+
+### 遇到的问题及解决
+
+#### 问题 1: `QueryRow.readTable` 方法不存在
+- **现象**: `customSelect` 返回的 `QueryRow` 调用 `readTable` 报 `undefined_method`
+- **原因**: `readTable` 是 `TypedResult`（`select().get()` 返回类型）的方法，`QueryRow`（`customSelect` 返回类型）不支持
+- **解决**: 改用 `row.read<String>('column_name')` 逐列读取，可空列使用 `row.readNullable<T>()`
+
+#### 问题 2: `use_build_context_synchronously` 警告
+- **现象**: 回收站页面对话框回调中 `Navigator.pop(context)` 后继续使用 `context` 触发 lint 警告
+- **原因**: 对话框 `context` 在 `pop` 后失效，`State.mounted` 检查不等价于 `BuildContext` 有效性检查
+- **解决**: 将 `showDialog` builder 参数从 `context` 重命名为 `dialogContext`，并在 async gap 前捕获 `ScaffoldMessenger` 实例
+
+#### 问题 3: 软删除导致原有测试失败
+- **现象**: `getNoteById returns null after deletion` 测试失败，软删除后笔记仍可查到
+- **原因**: `deleteNote` 从物理删除改为软删除，`getNoteById` 不过滤已删除笔记（回收站需查看）
+- **解决**: 重写测试验证软删除行为（`deletedAt` 非空、出现在 `getDeletedNotes`、不在 `getAllNotes` 中）
+
+### 技术决策
+- **FTS5 虚拟表 + 触发器**: 使用外部内容表方案（FTS 表存储副本），通过 INSERT/UPDATE/DELETE 触发器自动同步索引，应用层 CRUD 无需感知 FTS 存在
+- **前缀搜索**: FTS5 查询末尾添加 `*` 实现前缀匹配，双引号包裹防止特殊字符（如空格）被解释为查询语法
+- **软删除 vs 物理删除**: `deletedAt` 时间戳方案，`getAllNotes` / `searchNotes` 过滤已删除项，`getNoteById` 保留访问（回收站查看），`permanentlyDeleteNote` 提供不可逆删除
+- **种子色动态主题**: `ColorScheme.fromSeed` 接受任意 `Color`，运行时切换无需重启，ARGB int 持久化到 `SharedPreferences`
+- **颜色选择器 UI**: 底部弹窗 + 圆形色块 + 勾选标记，直观简洁，8 种预设色覆盖常见需求
+
+### Git 提交记录
+```
+（待提交）
+```
+
+### 明日计划 (Week 3 Day 1)
+- go_router 路由迁移（声明式路由 + 深链接）
+- 笔记编辑器增强（图片插入、代码高亮）
+- 应用性能优化（列表懒加载、数据库索引）

@@ -11,18 +11,18 @@ class AppTheme {
   AppTheme._();
 
   /// 亮色主题
-  static ThemeData get light {
+  static ThemeData light({Color? seedColor}) {
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: AppColors.seed,
+      seedColor: seedColor ?? AppColors.seed,
       brightness: Brightness.light,
     );
     return _buildTheme(colorScheme);
   }
 
   /// 暗色主题
-  static ThemeData get dark {
+  static ThemeData dark({Color? seedColor}) {
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: AppColors.seed,
+      seedColor: seedColor ?? AppColors.seed,
       brightness: Brightness.dark,
     );
     return _buildTheme(colorScheme);

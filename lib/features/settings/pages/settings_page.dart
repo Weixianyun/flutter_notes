@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/router/app_router.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../notes/providers/notes_provider.dart';
 import '../providers/settings_provider.dart';
 import '../../../services/service_providers.dart';
@@ -17,6 +18,7 @@ class SettingsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
+    final seedColor = ref.watch(seedColorProvider);
     final isEncrypted = ref.watch(encryptionStatusProvider);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -54,6 +56,16 @@ class SettingsPage extends ConsumerWidget {
               ),
             ),
           ),
+          ListTile(
+            leading: const Icon(Icons.color_lens_outlined),
+            title: const Text('主题色'),
+            subtitle: Text(_seedColorLabel(seedColor)),
+            trailing: CircleAvatar(
+              backgroundColor: seedColor,
+              radius: 14,
+            ),
+            onTap: () => _showSeedColorPicker(context, ref, seedColor),
+          ),
           const Divider(height: 32),
 
           // ── 同步 ──
@@ -81,6 +93,13 @@ class SettingsPage extends ConsumerWidget {
 
           // ── 数据管理 ──
           const _SectionHeader(title: '数据管理'),
+          ListTile(
+            leading: const Icon(Icons.delete_outline),
+            title: const Text('回收站'),
+            subtitle: const Text('查看和恢复已删除的笔记'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.pushNamed(context, AppRouter.trash),
+          ),
           ListTile(
             leading: const Icon(Icons.file_download_outlined),
             title: const Text('导出笔记'),
@@ -146,6 +165,88 @@ class SettingsPage extends ConsumerWidget {
       ThemeMode.dark => '深色模式',
       ThemeMode.system => '跟随系统',
     };
+  }
+
+  String _seedColorLabel(Color color) {
+    for (final option in AppColors.seedColorOptions) {
+      if (option.color.toARGB32() == color.toARGB32()) {
+        return option.name;
+      }
+    }
+    return '自定义';
+  }
+
+  void _showSeedColorPicker(BuildContext context, WidgetRef ref, Color current) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '选择主题色',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 16,
+                runSpacing: 16,
+                children: AppColors.seedColorOptions.map((option) {
+                  final isSelected =
+                      option.color.toARGB32() == current.toARGB32();
+                  return GestureDetector(
+                    onTap: () {
+                      ref
+                          .read(seedColorProvider.notifier)
+                          .setColor(option.color);
+                      Navigator.pop(context);
+                    },
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: option.color,
+                            shape: BoxShape.circle,
+                            border: isSelected
+                                ? Border.all(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface,
+                                    width: 3,
+                                  )
+                                : null,
+                          ),
+                          child: isSelected
+                              ? const Icon(Icons.check,
+                                  color: Colors.white, size: 24)
+                              : null,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          option.name,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _showEncryptionInfo(BuildContext context, bool isEncrypted) {

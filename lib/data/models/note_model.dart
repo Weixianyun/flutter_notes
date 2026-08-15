@@ -20,6 +20,7 @@ class NoteModel {
     List<String>? tags,
     DateTime? createdAt,
     DateTime? updatedAt,
+    this.deletedAt,
   })  : id = id ?? const Uuid().v4(),
         tags = tags ?? [],
         createdAt = createdAt ?? DateTime.now(),
@@ -60,6 +61,7 @@ class NoteModel {
   final List<String> tags;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final DateTime? deletedAt;
 
   /// 内容摘要（取前 80 个字符）
   String get excerpt {
@@ -80,6 +82,7 @@ class NoteModel {
         'tags': tags,
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
+        if (deletedAt != null) 'deletedAt': deletedAt!.toIso8601String(),
       };
 
   /// 复制并修改部分字段
@@ -92,6 +95,7 @@ class NoteModel {
     List<String>? tags,
     DateTime? createdAt,
     DateTime? updatedAt,
+    DateTime? deletedAt,
   }) {
     return NoteModel(
       id: id ?? this.id,
@@ -102,6 +106,7 @@ class NoteModel {
       tags: tags ?? this.tags,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? DateTime.now(),
+      deletedAt: deletedAt ?? this.deletedAt,
     );
   }
 

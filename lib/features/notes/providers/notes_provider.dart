@@ -38,11 +38,44 @@ class NotesNotifier extends AsyncNotifier<List<NoteModel>> {
     ref.invalidateSelf();
   }
 
-  /// 删除笔记
+  /// 删除笔记（移入回收站）
   Future<void> deleteNote(String id) async {
     final repository = ref.read(noteRepositoryProvider);
     await repository.deleteNote(id);
     ref.invalidateSelf();
+  }
+
+  /// 恢复已删除笔记
+  Future<void> restoreNote(String id) async {
+    final repository = ref.read(noteRepositoryProvider);
+    await repository.restoreNote(id);
+    ref.invalidateSelf();
+  }
+
+  /// 永久删除笔记
+  Future<void> permanentlyDeleteNote(String id) async {
+    final repository = ref.read(noteRepositoryProvider);
+    await repository.permanentlyDeleteNote(id);
+    ref.invalidateSelf();
+  }
+
+  /// 清空回收站
+  Future<void> emptyTrash() async {
+    final repository = ref.read(noteRepositoryProvider);
+    await repository.emptyTrash();
+    ref.invalidateSelf();
+  }
+
+  /// 获取已删除笔记（回收站）
+  Future<List<NoteModel>> getDeletedNotes() async {
+    final repository = ref.read(noteRepositoryProvider);
+    return repository.getDeletedNotes();
+  }
+
+  /// 全文搜索笔记
+  Future<List<NoteModel>> searchNotes(String query) async {
+    final repository = ref.read(noteRepositoryProvider);
+    return repository.searchNotes(query);
   }
 
   /// 根据 ID 获取笔记

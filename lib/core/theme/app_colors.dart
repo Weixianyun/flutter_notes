@@ -10,6 +10,18 @@ class AppColors {
   // ── 种子色 (Material 3 ColorScheme 生成基准) ──
   static const Color seed = Color(0xFF6750A4);
 
+  /// 可选种子色列表（用户可在设置中切换）
+  static const List<SeedColorOption> seedColorOptions = [
+    SeedColorOption(name: '紫色', color: Color(0xFF6750A4)),
+    SeedColorOption(name: '蓝色', color: Color(0xFF1565C0)),
+    SeedColorOption(name: '绿色', color: Color(0xFF2E7D32)),
+    SeedColorOption(name: '橙色', color: Color(0xFFE65100)),
+    SeedColorOption(name: '粉色', color: Color(0xFFAD1457)),
+    SeedColorOption(name: '青色', color: Color(0xFF00695C)),
+    SeedColorOption(name: '靛蓝', color: Color(0xFF311B92)),
+    SeedColorOption(name: '红色', color: Color(0xFFC62828)),
+  ];
+
   // ── 亮色主题 ──
   static const Color lightPrimary = Color(0xFF6750A4);
   static const Color lightOnPrimary = Color(0xFFFFFFFF);
@@ -36,4 +48,12 @@ class AppColors {
   static const Color priorityLow = Color(0xFF4CAF50);
   static const Color priorityMedium = Color(0xFFFF9800);
   static const Color priorityHigh = Color(0xFFEF4444);
+}
+
+/// 种子色选项
+class SeedColorOption {
+  const SeedColorOption({required this.name, required this.color});
+
+  final String name;
+  final Color color;
 }

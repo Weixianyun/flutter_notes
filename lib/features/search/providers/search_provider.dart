@@ -8,24 +8,14 @@ final searchQueryProvider = StateProvider<String>((ref) => '');
 
 /// 搜索结果列表
 ///
-/// 监听 [notesProvider] 和 [searchQueryProvider]，
-/// 按标题、内容、标签模糊匹配过滤。
-/// 返回 [AsyncValue] 以适配异步笔记加载。
-final searchResultsProvider = Provider<AsyncValue<List<NoteModel>>>((ref) {
-  final query = ref.watch(searchQueryProvider).trim().toLowerCase();
-  final notesAsync = ref.watch(notesProvider);
-
-  return notesAsync.whenData((notes) {
-    if (query.isEmpty) return <NoteModel>[];
-    return notes.where((note) {
-      final title = note.title.toLowerCase();
-      final content = note.content.toLowerCase();
-      final tags = note.tags.map((t) => t.toLowerCase()).join(' ');
-      return title.contains(query) ||
-          content.contains(query) ||
-          tags.contains(query);
-    }).toList();
-  });
+/// 使用 SQLite FTS5 全文索引进行数据库级搜索，
+/// 支持标题、内容、标签的全文匹配。
+final searchResultsProvider = FutureProvider<List<NoteModel>>((ref) async {
+  final query = ref.watch(searchQueryProvider).trim();
+  if (query.isEmpty) return [];
+  // 重新监听 notesProvider 以便在笔记变更时刷新搜索结果
+  ref.watch(notesProvider);
+  return ref.read(notesProvider.notifier).searchNotes(query);
 });
 
 /// 搜索历史状态管理

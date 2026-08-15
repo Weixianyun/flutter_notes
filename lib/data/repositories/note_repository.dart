@@ -10,8 +10,11 @@ import '../models/note_model.dart';
 /// 定义笔记 CRUD 操作契约。所有方法均为异步，
 /// 由 [DriftNoteRepository] 基于 drift 数据库实现。
 abstract class NoteRepository {
-  /// 获取全部笔记（按更新时间倒序）
+  /// 获取全部未删除笔记（按更新时间倒序）
   Future<List<NoteModel>> getAllNotes();
+
+  /// 获取已删除笔记（回收站，按删除时间倒序）
+  Future<List<NoteModel>> getDeletedNotes();
 
   /// 根据 ID 获取单条笔记
   Future<NoteModel?> getNoteById(String id);
@@ -22,10 +25,22 @@ abstract class NoteRepository {
   /// 更新笔记
   Future<void> updateNote(NoteModel note);
 
-  /// 删除笔记
+  /// 软删除笔记（移入回收站）
   Future<void> deleteNote(String id);
 
-  /// 监听全部笔记变化（按更新时间倒序）
+  /// 恢复已删除笔记
+  Future<void> restoreNote(String id);
+
+  /// 永久删除笔记（不可恢复）
+  Future<void> permanentlyDeleteNote(String id);
+
+  /// 清空回收站
+  Future<void> emptyTrash();
+
+  /// 全文搜索笔记（FTS5）
+  Future<List<NoteModel>> searchNotes(String query);
+
+  /// 监听全部未删除笔记变化（按更新时间倒序）
   Stream<List<NoteModel>> watchAllNotes();
 }
 
@@ -58,6 +73,7 @@ class DriftNoteRepository implements NoteRepository {
           .toList(),
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
+      deletedAt: row.deletedAt,
     );
   }
 
@@ -71,6 +87,7 @@ class DriftNoteRepository implements NoteRepository {
       tags: Value(jsonEncode(note.tags)),
       createdAt: Value(note.createdAt),
       updatedAt: Value(note.updatedAt),
+      deletedAt: Value(note.deletedAt),
     );
   }
 
@@ -79,7 +96,17 @@ class DriftNoteRepository implements NoteRepository {
   @override
   Future<List<NoteModel>> getAllNotes() async {
     final rows = await (_db.select(_db.notes)
+          ..where((t) => t.deletedAt.isNull())
           ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)]))
+        .get();
+    return rows.map(_toModel).toList();
+  }
+
+  @override
+  Future<List<NoteModel>> getDeletedNotes() async {
+    final rows = await (_db.select(_db.notes)
+          ..where((t) => t.deletedAt.isNotNull())
+          ..orderBy([(t) => OrderingTerm.desc(t.deletedAt)]))
         .get();
     return rows.map(_toModel).toList();
   }
@@ -106,12 +133,78 @@ class DriftNoteRepository implements NoteRepository {
 
   @override
   Future<void> deleteNote(String id) async {
+    await (_db.update(_db.notes)..where((t) => t.id.equals(id)))
+        .write(NotesCompanion(deletedAt: Value(DateTime.now())));
+  }
+
+  @override
+  Future<void> restoreNote(String id) async {
+    await (_db.update(_db.notes)..where((t) => t.id.equals(id)))
+        .write(const NotesCompanion(deletedAt: Value(null)));
+  }
+
+  @override
+  Future<void> permanentlyDeleteNote(String id) async {
     await (_db.delete(_db.notes)..where((t) => t.id.equals(id))).go();
+  }
+
+  @override
+  Future<void> emptyTrash() async {
+    await (_db.delete(_db.notes)..where((t) => t.deletedAt.isNotNull())).go();
+  }
+
+  @override
+  Future<List<NoteModel>> searchNotes(String query) async {
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) return [];
+
+    final ftsQuery = _buildFtsQuery(trimmed);
+
+    final results = await _db.customSelect(
+      'SELECT n.* FROM notes n '
+      'JOIN notes_fts f ON n.id = f.note_id '
+      'WHERE notes_fts MATCH ? AND n.deleted_at IS NULL '
+      'ORDER BY n.updated_at DESC',
+      variables: [Variable.withString(ftsQuery)],
+      readsFrom: {_db.notes},
+    ).get();
+
+    return results.map((row) {
+      return NoteModel(
+        id: row.read<String>('id'),
+        title: row.read<String>('title'),
+        content: row.read<String>('content'),
+        priority: NotePriority.values.firstWhere(
+          (e) => e.name == row.read<String>('priority'),
+          orElse: () => NotePriority.medium,
+        ),
+        status: NoteStatus.values.firstWhere(
+          (e) => e.name == row.read<String>('status'),
+          orElse: () => NoteStatus.draft,
+        ),
+        tags: (jsonDecode(row.read<String>('tags')) as List<dynamic>)
+            .map((e) => e as String)
+            .toList(),
+        createdAt: row.read<DateTime>('created_at'),
+        updatedAt: row.read<DateTime>('updated_at'),
+        deletedAt: row.readNullable<DateTime>('deleted_at'),
+      );
+    }).toList();
+  }
+
+  /// 构建 FTS5 查询字符串
+  ///
+  /// 将用户输入转换为 FTS5 兼容的查询格式。
+  /// 支持：单词搜索、前缀搜索（自动添加 * 后缀）。
+  String _buildFtsQuery(String input) {
+    final escaped = input.replaceAll('"', '""');
+    return '"$escaped"*';
   }
 
   @override
   Stream<List<NoteModel>> watchAllNotes() {
     return (_db.select(_db.notes)
+          ..where((t) => t.deletedAt.isNull())
           ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)]))
         .watch()
         .map((rows) => rows.map(_toModel).toList());
@@ -196,9 +289,18 @@ class MockNoteRepository implements NoteRepository {
 
   @override
   Future<List<NoteModel>> getAllNotes() async {
-    return List.from(
-      _notes..sort((a, b) => b.updatedAt.compareTo(a.updatedAt)),
-    );
+    return _notes
+        .where((n) => n.deletedAt == null)
+        .toList()
+      ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+  }
+
+  @override
+  Future<List<NoteModel>> getDeletedNotes() async {
+    return _notes
+        .where((n) => n.deletedAt != null)
+        .toList()
+      ..sort((a, b) => b.deletedAt!.compareTo(a.deletedAt!));
   }
 
   @override
@@ -225,7 +327,40 @@ class MockNoteRepository implements NoteRepository {
 
   @override
   Future<void> deleteNote(String id) async {
+    final index = _notes.indexWhere((n) => n.id == id);
+    if (index != -1) {
+      _notes[index] = _notes[index].copyWith(deletedAt: DateTime.now());
+    }
+  }
+
+  @override
+  Future<void> restoreNote(String id) async {
+    final index = _notes.indexWhere((n) => n.id == id);
+    if (index != -1) {
+      _notes[index] = _notes[index].copyWith(deletedAt: null);
+    }
+  }
+
+  @override
+  Future<void> permanentlyDeleteNote(String id) async {
     _notes.removeWhere((n) => n.id == id);
+  }
+
+  @override
+  Future<void> emptyTrash() async {
+    _notes.removeWhere((n) => n.deletedAt != null);
+  }
+
+  @override
+  Future<List<NoteModel>> searchNotes(String query) async {
+    final q = query.trim().toLowerCase();
+    if (q.isEmpty) return [];
+    return _notes.where((n) {
+      if (n.deletedAt != null) return false;
+      return n.title.toLowerCase().contains(q) ||
+          n.content.toLowerCase().contains(q) ||
+          n.tags.any((t) => t.toLowerCase().contains(q));
+    }).toList();
   }
 
   @override

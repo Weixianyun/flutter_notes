@@ -152,8 +152,8 @@ void main() {
       });
     });
 
-    group('deleteNote', () {
-      test('removes note by ID', () async {
+    group('deleteNote (soft delete)', () {
+      test('removes note from active list', () async {
         final before = await repository.getAllNotes();
         final countBefore = before.length;
 
@@ -164,11 +164,19 @@ void main() {
         expect(after.any((n) => n.id == 'seed-1'), isFalse);
       });
 
-      test('getNoteById returns null after deletion', () async {
+      test('sets deletedAt timestamp on soft-deleted note', () async {
         await repository.deleteNote('seed-4');
 
         final note = await repository.getNoteById('seed-4');
-        expect(note, isNull);
+        expect(note, isNotNull);
+        expect(note!.deletedAt, isNotNull);
+      });
+
+      test('soft-deleted note appears in getDeletedNotes', () async {
+        await repository.deleteNote('seed-4');
+
+        final deleted = await repository.getDeletedNotes();
+        expect(deleted.any((n) => n.id == 'seed-4'), isTrue);
       });
 
       test('does not throw when deleting non-existent ID', () async {
@@ -176,6 +184,111 @@ void main() {
           repository.deleteNote('non-existent'),
           completes,
         );
+      });
+    });
+
+    group('restoreNote', () {
+      test('restores a soft-deleted note to active list', () async {
+        await repository.deleteNote('seed-1');
+
+        final deletedAfterDelete = await repository.getDeletedNotes();
+        expect(deletedAfterDelete.any((n) => n.id == 'seed-1'), isTrue);
+
+        await repository.restoreNote('seed-1');
+
+        final activeAfterRestore = await repository.getAllNotes();
+        expect(activeAfterRestore.any((n) => n.id == 'seed-1'), isTrue);
+
+        final deletedAfterRestore = await repository.getDeletedNotes();
+        expect(deletedAfterRestore.any((n) => n.id == 'seed-1'), isFalse);
+
+        final note = await repository.getNoteById('seed-1');
+        expect(note!.deletedAt, isNull);
+      });
+    });
+
+    group('permanentlyDeleteNote', () {
+      test('permanently removes a note from database', () async {
+        await repository.deleteNote('seed-2');
+        await repository.permanentlyDeleteNote('seed-2');
+
+        final note = await repository.getNoteById('seed-2');
+        expect(note, isNull);
+
+        final active = await repository.getAllNotes();
+        expect(active.any((n) => n.id == 'seed-2'), isFalse);
+
+        final deleted = await repository.getDeletedNotes();
+        expect(deleted.any((n) => n.id == 'seed-2'), isFalse);
+      });
+    });
+
+    group('emptyTrash', () {
+      test('removes all soft-deleted notes', () async {
+        await repository.deleteNote('seed-1');
+        await repository.deleteNote('seed-2');
+
+        final deletedBefore = await repository.getDeletedNotes();
+        expect(deletedBefore.length, 2);
+
+        await repository.emptyTrash();
+
+        final deletedAfter = await repository.getDeletedNotes();
+        expect(deletedAfter, isEmpty);
+      });
+
+      test('does not affect active notes', () async {
+        final activeBefore = await repository.getAllNotes();
+
+        await repository.deleteNote('seed-1');
+        await repository.emptyTrash();
+
+        final activeAfter = await repository.getAllNotes();
+        expect(activeAfter.length, activeBefore.length - 1);
+        expect(activeAfter.any((n) => n.id == 'seed-1'), isFalse);
+      });
+    });
+
+    group('searchNotes (FTS5)', () {
+      test('finds notes by title keyword', () async {
+        final results = await repository.searchNotes('Dart');
+        expect(results, isNotEmpty);
+        expect(results.any((n) => n.title.contains('Dart')), isTrue);
+      });
+
+      test('finds notes by content keyword', () async {
+        final results = await repository.searchNotes('ColorScheme');
+        expect(results, isNotEmpty);
+        expect(results.any((n) => n.content.contains('ColorScheme')), isTrue);
+      });
+
+      test('finds notes by tag keyword', () async {
+        final results = await repository.searchNotes('Riverpod');
+        expect(results, isNotEmpty);
+        expect(results.any((n) => n.tags.contains('Riverpod')), isTrue);
+      });
+
+      test('returns empty list for empty query', () async {
+        final results = await repository.searchNotes('');
+        expect(results, isEmpty);
+      });
+
+      test('returns empty list for no matches', () async {
+        final results = await repository.searchNotes('zzzznonexistent');
+        expect(results, isEmpty);
+      });
+
+      test('excludes soft-deleted notes from results', () async {
+        await repository.deleteNote('seed-1');
+
+        final results = await repository.searchNotes('空安全');
+        expect(results.any((n) => n.id == 'seed-1'), isFalse);
+      });
+
+      test('supports prefix search', () async {
+        final results = await repository.searchNotes('Mar');
+        expect(results, isNotEmpty);
+        expect(results.any((n) => n.title.contains('Markdown')), isTrue);
       });
     });
 

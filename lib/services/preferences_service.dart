@@ -12,6 +12,7 @@ class PreferencesService {
 
   // ── 存储键 ──
   static const _themeModeKey = 'theme_mode';
+  static const _seedColorKey = 'seed_color';
   static const _markdownAutoPreviewKey = 'markdown_auto_preview';
   static const _defaultPriorityKey = 'default_priority';
   static const _encryptedTokenKey = 'github_encrypted_token';
@@ -33,6 +34,18 @@ class PreferencesService {
   /// 设置主题模式
   Future<void> setThemeMode(ThemeMode mode) {
     return _prefs.setString(_themeModeKey, mode.name);
+  }
+
+  // ── 种子色 ──
+
+  /// 获取种子色 ARGB 值（默认紫色 0xFF6750A4）
+  int getSeedColor() {
+    return _prefs.getInt(_seedColorKey) ?? 0xFF6750A4;
+  }
+
+  /// 设置种子色
+  Future<void> setSeedColor(int argb) {
+    return _prefs.setInt(_seedColorKey, argb);
   }
 
   // ── Markdown 自动预览 ──

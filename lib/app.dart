@@ -15,12 +15,13 @@ class FlutterNotesApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
+    final seedColor = ref.watch(seedColorProvider);
 
     return MaterialApp(
       title: 'Flutter Notes',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
+      theme: AppTheme.light(seedColor: seedColor),
+      darkTheme: AppTheme.dark(seedColor: seedColor),
       themeMode: themeMode,
       initialRoute: AppRouter.home,
       onGenerateRoute: AppRouter.onGenerateRoute,

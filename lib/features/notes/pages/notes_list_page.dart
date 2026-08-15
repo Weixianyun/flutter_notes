@@ -38,6 +38,11 @@ class NotesListPage extends ConsumerWidget {
             onPressed: () => Navigator.pushNamed(context, AppRouter.graph),
           ),
           IconButton(
+            icon: const Icon(Icons.delete_outline),
+            tooltip: '回收站',
+            onPressed: () => Navigator.pushNamed(context, AppRouter.trash),
+          ),
+          IconButton(
             icon: const Icon(Icons.search),
             tooltip: '搜索笔记',
             onPressed: () => Navigator.pushNamed(context, AppRouter.search),
@@ -174,11 +179,11 @@ class NotesListPage extends ConsumerWidget {
     ref.read(notesProvider.notifier).deleteNote(note.id);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('已删除「${note.title}」'),
+        content: Text('已移入回收站「${note.title}」'),
         action: SnackBarAction(
           label: '撤销',
           onPressed: () {
-            ref.read(notesProvider.notifier).addNote(note);
+            ref.read(notesProvider.notifier).restoreNote(note.id);
           },
         ),
       ),

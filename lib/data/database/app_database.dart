@@ -39,6 +39,9 @@ class Notes extends Table {
   DateTimeColumn get updatedAt =>
       dateTime().withDefault(currentDateAndTime)();
 
+  /// 软删除时间（null 表示未删除）
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -55,15 +58,65 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) async {
           await m.createAll();
+          await _createFts(m);
           await _seedData();
         },
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            await m.addColumn(notes, notes.deletedAt);
+            await _createFts(m);
+            await _populateFts();
+          }
+        },
       );
+
+  /// 创建 FTS5 全文索引虚拟表和触发器
+  Future<void> _createFts(Migrator m) async {
+    await m.database.customStatement('''
+      CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(
+        note_id UNINDEXED,
+        title,
+        content,
+        tags,
+        tokenize = 'unicode61'
+      );
+    ''');
+
+    await m.database.customStatement('''
+      CREATE TRIGGER IF NOT EXISTS notes_ai AFTER INSERT ON notes BEGIN
+        INSERT INTO notes_fts(note_id, title, content, tags)
+        VALUES (new.id, new.title, new.content, new.tags);
+      END;
+    ''');
+
+    await m.database.customStatement('''
+      CREATE TRIGGER IF NOT EXISTS notes_ad AFTER DELETE ON notes BEGIN
+        DELETE FROM notes_fts WHERE note_id = old.id;
+      END;
+    ''');
+
+    await m.database.customStatement('''
+      CREATE TRIGGER IF NOT EXISTS notes_au AFTER UPDATE ON notes BEGIN
+        DELETE FROM notes_fts WHERE note_id = old.id;
+        INSERT INTO notes_fts(note_id, title, content, tags)
+        VALUES (new.id, new.title, new.content, new.tags);
+      END;
+    ''');
+  }
+
+  /// 从现有笔记数据填充 FTS 索引
+  Future<void> _populateFts() async {
+    await customStatement('''
+      INSERT INTO notes_fts(note_id, title, content, tags)
+      SELECT id, title, content, tags FROM notes;
+    ''');
+  }
 
   /// 首次创建时插入种子数据
   Future<void> _seedData() async {

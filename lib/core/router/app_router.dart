@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../features/editor/pages/note_editor_page.dart';
 import '../../features/graph/pages/graph_page.dart';
 import '../../features/notes/pages/notes_list_page.dart';
+import '../../features/notes/pages/trash_page.dart';
 import '../../features/search/pages/search_page.dart';
 import '../../features/settings/pages/settings_page.dart';
 import '../../features/sync/pages/github_login_page.dart';
@@ -23,6 +24,7 @@ class AppRouter {
   static const String graph = '/graph';
   static const String githubLogin = '/github-login';
   static const String syncSettings = '/sync-settings';
+  static const String trash = '/trash';
 
   /// 路由表生成
   static Map<String, WidgetBuilder> get routes => {
@@ -35,6 +37,7 @@ class AppRouter {
         graph: (_) => const GraphPage(),
         githubLogin: (_) => const GitHubLoginPage(),
         syncSettings: (_) => const SyncSettingsPage(),
+        trash: (_) => const TrashPage(),
       };
 
   /// 生成路由（支持转场动画）
