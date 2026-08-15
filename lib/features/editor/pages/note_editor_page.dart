@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/models/note_model.dart';
+import '../../../services/service_providers.dart';
 import '../../notes/providers/notes_provider.dart';
 import '../providers/editor_provider.dart';
 import '../widgets/markdown_preview.dart';
@@ -110,6 +112,12 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
                 ref.read(previewModeProvider.notifier).state = !isPreview;
               },
             ),
+            if (_isEditing)
+              IconButton(
+                icon: const Icon(Icons.ios_share),
+                tooltip: '导出',
+                onPressed: _exportCurrentNote,
+              ),
             IconButton(
               icon: const Icon(Icons.check),
               tooltip: '保存',
@@ -285,6 +293,66 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
     );
 
     Navigator.of(context).pop();
+  }
+
+  // ── 导出 ──
+
+  Future<void> _exportCurrentNote() async {
+    final note = await ref.read(notesProvider.notifier).getNoteById(widget.noteId!);
+    if (note == null) return;
+
+    try {
+      final exportService = ref.read(exportServiceProvider);
+      final filePath = await exportService.exportNote(note);
+
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('导出成功'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('已导出为 Markdown 文件：'),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: SelectableText(
+                  filePath,
+                  style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: filePath));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('路径已复制')),
+                );
+              },
+              child: const Text('复制路径'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('完成'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('导出失败: $e')),
+      );
+    }
   }
 
   // ── 退出确认 ──

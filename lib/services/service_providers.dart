@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'crypto_service.dart';
+import 'export_service.dart';
 import 'github_service.dart';
 import 'preferences_service.dart';
 import 'sync_service.dart';
@@ -53,4 +54,14 @@ final syncServiceProvider = Provider<SyncService?>((ref) {
   if (token == null) return null;
   final github = ref.watch(githubServiceProvider);
   return SyncService(github, token);
+});
+
+/// 导出服务 Provider
+///
+/// 复用 SyncService 的 noteToMarkdown/slugify 方法进行本地导出。
+/// 不依赖 GitHub token。
+final exportServiceProvider = Provider<ExportService>((ref) {
+  final github = ref.watch(githubServiceProvider);
+  final sync = SyncService(github, 'export-only');
+  return ExportService(sync);
 });

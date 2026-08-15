@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../notes/providers/notes_provider.dart';
 import '../providers/settings_provider.dart';
+import '../../../services/service_providers.dart';
 
 /// 设置页面
 ///
@@ -84,7 +86,7 @@ class SettingsPage extends ConsumerWidget {
             title: const Text('导出笔记'),
             subtitle: const Text('导出为 Markdown 文件'),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => _showComingSoon(context, '导出功能'),
+            onTap: () => _exportNotes(context, ref),
           ),
           ListTile(
             leading: const Icon(Icons.file_upload_outlined),
@@ -174,6 +176,85 @@ class SettingsPage extends ConsumerWidget {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('$feature即将推出')),
     );
+  }
+
+  Future<void> _exportNotes(BuildContext context, WidgetRef ref) async {
+    final notesAsync = ref.read(notesProvider);
+    final notes = notesAsync.valueOrNull ?? [];
+
+    if (notes.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('没有笔记可导出')),
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('正在导出...')),
+    );
+
+    try {
+      final exportService = ref.read(exportServiceProvider);
+      final result = await exportService.exportAllNotes(notes);
+
+      if (!context.mounted) return;
+
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('导出完成'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('成功导出 ${result.success}/${result.total} 篇笔记'),
+              if (result.errors.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  '失败 ${result.failed} 篇',
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ],
+              const SizedBox(height: 12),
+              const Text('导出路径：'),
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: SelectableText(
+                  result.directoryPath,
+                  style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Clipboard.setData(
+                    ClipboardData(text: result.directoryPath));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('路径已复制到剪贴板')),
+                );
+              },
+              child: const Text('复制路径'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('完成'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('导出失败: $e')),
+      );
+    }
   }
 
   void _showClearConfirm(BuildContext context, WidgetRef ref) {

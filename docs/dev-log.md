@@ -788,3 +788,84 @@ b5b69f5 feat: Week 1 Day 3 - search, tag management, settings page
 - 知识图谱交互增强（节点拖拽、长按多选）
 - 笔记导出功能（Markdown 文件导出到本地）
 - 应用图标与启动页定制
+
+## 2026-08-15 | Week 2 Day 4 — 图谱交互增强 + 笔记导出 + 应用图标
+
+### 今日完成
+
+#### 1. 知识图谱交互增强
+##### 节点拖拽
+- `onScaleStart`：检测触摸点是否命中节点，记录 `_draggedNode`
+- `onScaleUpdate`：单指拖拽节点时实时更新 `node.x/y`，通过 `_screenToCanvas()` 坐标转换
+- 拖拽 vs 平移：`details.pointerCount == 1` 且命中节点 → 拖拽，否则 → 平移缩放
+- 视觉反馈：被拖拽节点显示光晕（`primary` 色 20% 透明度外圈）
+
+##### 长按多选
+- `onLongPressStart`：长按节点进入选择模式，触发 `HapticFeedback.mediumImpact()`
+- 选择模式下点击节点 → `_toggleSelection()`（添加/移除选中）
+- 选中节点视觉：`primary` 色填充 + 3px 边框 + 右上角勾选标记（✓）
+- 选中节点的关联边高亮：`primary` 色 50% 透明度，2.5px 粗线
+- 非选中节点的边标签隐藏，减少视觉干扰
+
+##### 多选操作栏
+- `GraphPage` 改为 `ConsumerStatefulWidget`，维护 `_selectedIds` 和 `_isSelectionMode`
+- AppBar 适配：选择模式显示"已选 N 篇"标题 + 关闭按钮 + 删除/打开操作
+- 顶部提示浮层：选择模式下显示"长按选择，点击节点添加/移除选中"
+- 批量删除：确认对话框 → 逐条调用 `deleteNote` → 刷新图谱
+- 单选打开：仅选中 1 篇时显示"打开笔记"按钮，跳转编辑器
+- 图例新增：长按多选 + 拖拽节点操作说明
+
+#### 2. 笔记导出功能
+##### ExportService (`lib/services/export_service.dart`)
+- `exportNote(NoteModel)` → 导出单条笔记为 `.md` 文件，返回文件路径
+- `exportAllNotes(List<NoteModel>)` → 批量导出，返回 `ExportResult`（路径/成功数/错误列表）
+- 复用 `SyncService.noteToMarkdown()` 生成 YAML front matter + 正文
+- 复用 `SyncService.slugify()` 生成安全文件名
+- 导出目录：`{applicationDocumentsDirectory}/flutter_notes_export/`
+
+##### Provider 集成
+- `exportServiceProvider`：使用 `SyncService(github, 'export-only')`，不依赖 GitHub token
+- 导出服务仅使用 `noteToMarkdown` 和 `slugify` 方法，token 占位符不影响功能
+
+##### 设置页导出
+- 替换"即将推出"占位符为实际导出功能
+- 导出完成后显示对话框：成功/失败计数 + 导出路径（可选择复制到剪贴板）
+
+##### 编辑器单条导出
+- AppBar 新增导出按钮（`Icons.ios_share`），仅编辑已有笔记时显示
+- 导出后显示文件路径对话框 + 复制路径按钮
+
+#### 3. 应用图标与启动页定制
+##### 应用图标
+- 使用 AI 生成 1024x1024 应用图标（蓝色背景 + 白色笔记本 + Markdown "M" 符号）
+- 添加 `flutter_launcher_icons: ^0.13.1` dev 依赖
+- 配置 `flutter_launcher_icons`：Android 自适应图标，背景色 `#1565C0`
+- 运行 `dart run flutter_launcher_icons` 自动生成多分辨率 mipmap 图标
+- 自动创建 `colors.xml` 并注册 `ic_launcher_background` 颜色
+
+##### 启动页定制
+- `launch_background.xml`：背景色从白色改为 `#1565C0`（应用主色），居中显示应用图标
+- `values/colors.xml`：新增 `launch_background` 颜色定义
+- `values-night/colors.xml`：深色模式启动页背景色 `#0D47A1`（更深蓝）
+- assets 注册：`assets/app_icon.jpg` 添加到 pubspec.yaml
+
+### 验证结果
+- `flutter analyze`: No issues found (0 errors, 0 warnings)
+- `flutter test`: All tests passed! (86 tests)
+
+### 技术决策
+- **节点拖拽坐标转换**：`_screenToCanvas()` 将屏幕坐标转换为画布坐标（减去偏移后除以缩放），确保拖拽位置精确
+- **长按 vs 点击区分**：`onLongPressStart` 独立于 `onScaleEnd`，不冲突；选择模式下 `onScaleEnd` 的点击行为改为切换选中
+- **ExportService 复用 SyncService**：避免重复实现 `noteToMarkdown` 和 `slugify`，通过占位 token 创建 SyncService 实例
+- **flutter_launcher_icons**：自动生成多分辨率 Android 图标（mdpi~xxxhdpi），避免手动创建 5 个尺寸的 mipmap 文件
+- **启动页深色适配**：通过 `values-night/colors.xml` 提供深色模式下的更深背景色，无需额外 drawable 文件
+
+### Git 提交记录
+```
+(commit hash pending)
+```
+
+### 明日计划 (Week 2 Day 5)
+- 笔记全文搜索增强（SQLite FTS5 全文索引）
+- 笔记回收站功能（软删除 + 恢复）
+- 应用主题色自定义（多种种子色选择）
