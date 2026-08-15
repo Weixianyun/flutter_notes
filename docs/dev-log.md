@@ -1012,7 +1012,7 @@ b5b69f5 feat: Week 1 Day 3 - search, tag management, settings page
 
 ### Git 提交记录
 ```
-（待提交）
+62833f1 feat: Week 2 Day 5 - FTS5 full-text search, trash (soft delete), and theme color customization
 ```
 
 ### 明日计划 (Week 3 Day 1)
