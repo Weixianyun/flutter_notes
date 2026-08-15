@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../features/editor/pages/note_editor_page.dart';
+import '../../features/graph/pages/graph_page.dart';
 import '../../features/notes/pages/notes_list_page.dart';
 import '../../features/search/pages/search_page.dart';
 import '../../features/settings/pages/settings_page.dart';
@@ -19,6 +20,7 @@ class AppRouter {
   static const String editor = '/editor';
   static const String search = '/search';
   static const String settings = '/settings';
+  static const String graph = '/graph';
   static const String githubLogin = '/github-login';
   static const String syncSettings = '/sync-settings';
 
@@ -30,6 +32,7 @@ class AppRouter {
             ),
         search: (_) => const SearchPage(),
         settings: (_) => const SettingsPage(),
+        graph: (_) => const GraphPage(),
         githubLogin: (_) => const GitHubLoginPage(),
         syncSettings: (_) => const SyncSettingsPage(),
       };

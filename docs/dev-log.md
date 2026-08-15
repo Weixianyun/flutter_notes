@@ -709,3 +709,82 @@ b5b69f5 feat: Week 1 Day 3 - search, tag management, settings page
 - GitHub OAuth App 配置替换为真实 Client ID
 - 同步功能端到端集成测试（真机/模拟器）
 - 笔记编辑器 Markdown 渲染增强（代码高亮、表格支持）
+
+## 2026-08-15 | Week 2 Day 3 — Markdown 渲染增强 + 知识图谱
+
+### 今日完成
+
+#### 1. Markdown 预览增强 (`lib/features/editor/widgets/markdown_preview.dart`)
+##### GitHub Flavored Markdown
+- 启用 `ExtensionSet.gitHubWeb`：支持表格、任务列表（checkbox）、删除线、自动链接
+- `checkboxBuilder`：渲染任务列表复选框（Material Icons，主题色）
+- `onTapLink`：点击链接复制 URL 到剪贴板
+
+##### 代码块增强
+- 自定义 `CodeBlockBuilder`（继承 `MarkdownElementBuilder`）：
+  - 从 `<code>` 元素的 `class` 属性提取语言标签
+  - 显示语言名称标签（等宽字体，灰色）
+  - 深色/浅色主题自适应代码背景色
+  - `SelectableText` 支持代码选择复制
+- 代码块样式：圆角边框、等宽字体、行高 1.5
+
+##### 样式增强
+- 表格：`tableBody` 文本样式、`tableCellsPadding` 单元格内边距、`tableColumnWidth` 弹性列宽
+- 删除线：`del` 样式（lineThrough + onSurfaceVariant）
+- 链接：`a` 样式（primary 色 + underline）
+- 代码块背景色：深色主题 `#1E1E2E`，浅色主题 `#F6F8FA`
+
+#### 2. 知识图谱功能
+##### 数据模型 (`lib/features/graph/models/graph_data.dart`)
+- `GraphNode`：id/title/tags/priority/坐标(x,y)/半径
+- `GraphEdge`：sourceId/targetId/label（共享标签名）
+- `GraphData`：
+  - `applyForceLayout()`：力导向布局算法（节点斥力 + 边引力 + 阻尼）
+  - `normalize()`：归一化坐标到画布尺寸范围
+
+##### 图谱 Provider (`lib/features/graph/providers/graph_provider.dart`)
+- `graphDataProvider`：从 `notesProvider` 派生
+- 节点 = 每条笔记，边 = 共享相同标签的两条笔记
+- 边标签 = 共享的标签名
+
+##### 图谱画布 (`lib/features/graph/widgets/graph_canvas.dart`)
+- `GraphCanvas`：StatefulWidget + CustomPaint
+- 手势交互：`onScaleStart/Update/End` 支持平移和缩放
+- 点击检测：通过 `_lastFocalPoint` + 低速度判断点击 vs 拖拽
+- `_GraphPainter`（CustomPainter）：
+  - 边绘制：线条 + 中点标签
+  - 节点绘制：圆形（颜色按优先级：tertiary/primary/error）+ 标题截断显示
+  - 变换：`canvas.translate` + `canvas.scale`
+
+##### 图谱页面 (`lib/features/graph/pages/graph_page.dart`)
+- `GraphPage`：ConsumerWidget
+- 空状态：无笔记时引导创建
+- 图谱渲染：`applyForceLayout` + `normalize` + `GraphCanvas`
+- 统计信息浮层：笔记数 + 关联数
+- 图例弹窗：优先级颜色说明 + 边含义
+- 节点点击 → 跳转笔记编辑器
+
+##### 路由与导航
+- `app_router.dart`：新增 `/graph` 路由
+- `notes_list_page.dart`：AppBar 新增知识图谱图标按钮
+
+### 验证结果
+- `flutter analyze`: No issues found (0 errors, 0 warnings)
+- `flutter test`: All tests passed! (86 tests)
+
+### 技术决策
+- **ExtensionSet.gitHubWeb**: 启用 GFM 扩展集而非自定义扩展，覆盖表格/任务列表/删除线等常用语法
+- **CodeBlockBuilder**: 自定义 `MarkdownElementBuilder` 替代默认 `pre` 渲染，支持语言标签和选择复制
+- **力导向布局**: 实现 O(n²) 斥力 + O(e) 引力的简单力导向算法，适合中小规模笔记图谱（<100 节点）
+- **CustomPainter vs 第三方库**: 使用 `CustomPainter` 自绘图谱，避免引入 `graphview` 等额外依赖，保持项目轻量
+- **手势检测**: `ScaleEndDetails` 无 `focalPoint`，通过 `onScaleUpdate` 追踪 `_lastFocalPoint` + 速度判断实现点击检测
+
+### Git 提交记录
+```
+(commit hash pending)
+```
+
+### 明日计划 (Week 2 Day 4)
+- 知识图谱交互增强（节点拖拽、长按多选）
+- 笔记导出功能（Markdown 文件导出到本地）
+- 应用图标与启动页定制

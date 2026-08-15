@@ -33,6 +33,11 @@ class NotesListPage extends ConsumerWidget {
         title: const Text('Flutter Notes'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.account_tree_outlined),
+            tooltip: '知识图谱',
+            onPressed: () => Navigator.pushNamed(context, AppRouter.graph),
+          ),
+          IconButton(
             icon: const Icon(Icons.search),
             tooltip: '搜索笔记',
             onPressed: () => Navigator.pushNamed(context, AppRouter.search),
