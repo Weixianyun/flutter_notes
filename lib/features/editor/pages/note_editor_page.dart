@@ -540,17 +540,16 @@ class _MarkdownToolbar extends StatelessWidget {
   void _insertAtCursor(String text) {
     final currentText = controller.text;
     final selection = controller.selection;
-    if (selection.isValid) {
-      final newText = currentText.replaceRange(
-        selection.start,
-        selection.end,
-        text,
-      );
-      controller.text = newText;
-      controller.selection = TextSelection.collapsed(
-        offset: selection.start + text.length,
-      );
-    }
+    final insertOffset = selection.isValid ? selection.start : currentText.length;
+    final newText = currentText.replaceRange(
+      insertOffset,
+      selection.isValid ? selection.end : currentText.length,
+      text,
+    );
+    controller.text = newText;
+    controller.selection = TextSelection.collapsed(
+      offset: insertOffset + text.length,
+    );
   }
 
   /// 图片插入对话框

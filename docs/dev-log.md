@@ -1127,3 +1127,106 @@ b5b69f5 feat: Week 1 Day 3 - search, tag management, settings page
 - Widget 测试增强（go_router 路由测试、编辑器图片插入测试）
 - 知识图谱节点搜索功能
 - 笔记批量操作（多选删除/导出）
+
+## 2026-08-20 | Week 3 Day 2 — 批量操作 + 图谱搜索 + 测试增强
+
+### 今日完成
+
+#### 1. 笔记列表批量操作（多选删除/导出）
+
+##### NotesListPage 重构 (`lib/features/notes/pages/notes_list_page.dart`)
+- `ConsumerWidget` → `ConsumerStatefulWidget`，管理 `_selectedIds` 和 `_isSelectionMode` 状态
+- 长按笔记卡片进入多选模式，自动选中该笔记
+- 多选模式下：
+  - AppBar 标题显示「已选 N 篇」
+  - 关闭按钮退出选择模式
+  - 全选/取消全选按钮（`Icons.select_all`）
+  - 导出选中笔记按钮（`Icons.ios_share`）
+  - 批量删除按钮（`Icons.delete_outline`），确认对话框 → 移入回收站
+  - FAB 隐藏
+  - 禁用 Dismissible 滑动删除
+- 选择模式下点击笔记切换选中/取消选中
+- `_selectAll()` / `_exitSelectionMode()` / `_toggleSelection()` 方法
+
+##### NoteCard 组件增强 (`lib/features/notes/widgets/note_card.dart`)
+- 新增 `isSelected` 和 `showCheckbox` 参数
+- 多选模式下显示圆形复选框（选中 `Icons.check_circle` / 未选 `Icons.radio_button_unchecked`）
+- 选中状态卡片背景色变为 `primaryContainer`
+- 卡片内容从 Column 改为 Row（复选框 + 内容），保持原有布局
+
+##### 批量导出实现
+- `_exportSelected()`：获取选中笔记 → 调用 `ExportService.exportAllNotes()` → 显示导出结果对话框
+- 复用已有 `ExportService` 的 `exportAllNotes` 方法，无需额外实现
+
+#### 2. 知识图谱节点搜索功能
+
+##### 图谱页面搜索栏 (`lib/features/graph/pages/graph_page.dart`)
+- 顶部浮层搜索栏（`_SearchBar` 组件），圆角输入框 + 搜索图标 + 清除按钮
+- 搜索关键词实时过滤：匹配节点标题或标签（不区分大小写）
+- 匹配结果计数浮层：「匹配 N 个节点」或「无匹配节点」
+- `_getHighlightedIds(GraphData graph)`：返回匹配搜索条件的节点 ID 集合
+
+##### GraphCanvas 搜索高亮 (`lib/features/graph/widgets/graph_canvas.dart`)
+- 新增 `highlightedIds` 和 `hasSearch` 参数
+- 搜索激活时：
+  - 匹配节点：tertiary 色光晕 + 正常颜色
+  - 非匹配节点：25% 透明度变暗 + 标题文字变淡
+  - 匹配节点间的边：正常颜色
+  - 非匹配边：8% 透明度极淡
+- `shouldRepaint` 新增 `highlightedIds` 和 `hasSearch` 比较
+
+##### 图例更新
+- 新增搜索说明：「搜索栏按标题或标签筛选节点」
+
+#### 3. Widget 测试增强
+
+##### 新增 9 项 Widget 测试（共 15 项 → 107 项总测试）
+- **go_router 路由导航测试（3 项）**：
+  - 导航至回收站页面（点击回收站按钮 → 验证页面标题）
+  - 导航至设置页面（点击更多按钮 → 验证页面标题）
+  - 导航至知识图谱页面（点击知识图谱按钮 → 验证页面标题）
+- **编辑器图片插入测试（1 项）**：
+  - 点击图片工具栏按钮 → 验证对话框显示
+  - 通过 `labelText` 精确定位对话框输入框（URL + 替代文本）
+  - 点击插入 → 验证内容输入框包含 `![alt](url)` Markdown 语法
+  - 通过 `hintText` 精确定位内容输入框（排除对话框 TextField 干扰）
+- **批量操作测试（3 项）**：
+  - 长按笔记进入选择模式（验证标题、全选/导出/删除按钮、FAB 隐藏）
+  - 全选/取消全选（验证「已选 6 篇」→ 再次点击退出选择模式）
+  - 关闭按钮退出选择模式
+- **图谱搜索测试（2 项）**：
+  - 图谱页显示搜索栏（验证 TextField 和提示文本）
+  - 搜索显示匹配计数（输入关键词 → 验证「匹配 N」提示）
+
+### 验证结果
+- `flutter analyze`: No issues found (0 errors, 0 warnings)
+- `flutter test`: All tests passed! (107 tests, 新增 9 项)
+
+### 遇到的问题及解决
+
+#### 问题 1: `_insertAtCursor` 在对话框中插入失败
+- **现象**：编辑器内容为空时，通过图片对话框插入 Markdown 语法无效
+- **原因**：新建的 `TextEditingController` 默认 `selection` 为 `TextSelection.collapsed(offset: -1)`，`isValid` 返回 `false`，导致 `_insertAtCursor` 跳过插入逻辑
+- **解决**：当 `selection.isValid` 为 false 时，默认插入到文本末尾（`currentText.length`），并设置新的光标位置
+
+#### 问题 2: Widget 测试中 TextField 定位错误
+- **现象**：图片插入测试中 `find.byType(TextField).at(0/1)` 找到的是编辑器的标题/内容输入框而非对话框的
+- **原因**：对话框是 Overlay 渲染在编辑器之上，`find.byType(TextField)` 按 Widget 树顺序返回，对话框 TextField 排在编辑器之后
+- **解决**：改用 `find.byWidgetPredicate` 通过 `decoration.labelText` 精确匹配对话框输入框（'图片 URL' / '替代文本'），内容输入框通过 `hintText.contains('Markdown')` 匹配
+
+### 技术决策
+- **ConsumerStatefulWidget 选择模式**：笔记列表需要维护选中状态集合，StatefulWidget 提供生命周期管理和 `setState` 局部刷新
+- **NoteCard 复选框设计**：使用 `Icons.check_circle` / `Icons.radio_button_unchecked` 图标而非 `Checkbox` widget，视觉更紧凑且与卡片设计一致
+- **图谱搜索实时过滤**：搜索栏 `onChanged` 直接 `setState` 更新搜索词，`_getHighlightedIds` 在 build 中计算匹配集合，无需额外 Provider
+- **图谱搜索高亮策略**：匹配节点加 tertiary 色光晕，非匹配节点变暗至 25% 透明度，保持图谱结构可见但突出搜索结果
+- **测试定位策略**：使用 `find.byWidgetPredicate` + `decoration` 属性精确定位 Widget，避免索引依赖和脆弱测试
+
+### Git 提交记录
+```
+(commit 待提交)
+```
+
+### 明日计划 (Week 3 Day 3)
+- 笔记标签管理增强（标签 CRUD、颜色标记）
+- 笔记排序选项（按标题/创建时间/优先级）
+- 应用国际化（i18n）基础框架

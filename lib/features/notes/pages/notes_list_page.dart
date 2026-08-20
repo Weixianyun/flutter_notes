@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../../data/models/note_model.dart';
+import '../../../services/service_providers.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../providers/notes_provider.dart';
 import '../providers/tags_provider.dart';
@@ -15,11 +16,159 @@ import '../widgets/tag_filter_bar.dart';
 /// 应用首页，展示所有笔记的卡片列表。
 /// 通过 Riverpod [filteredNotesProvider] 管理过滤后的笔记数据，
 /// 支持标签过滤、搜索入口、新建笔记、滑动删除、长按操作菜单。
-class NotesListPage extends ConsumerWidget {
+/// 长按笔记卡片进入多选模式，支持批量删除和导出。
+class NotesListPage extends ConsumerStatefulWidget {
   const NotesListPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<NotesListPage> createState() => _NotesListPageState();
+}
+
+class _NotesListPageState extends ConsumerState<NotesListPage> {
+  final Set<String> _selectedIds = {};
+  bool _isSelectionMode = false;
+
+  void _enterSelectionMode(String noteId) {
+    setState(() {
+      _isSelectionMode = true;
+      _selectedIds.add(noteId);
+    });
+  }
+
+  void _toggleSelection(String noteId) {
+    setState(() {
+      if (_selectedIds.contains(noteId)) {
+        _selectedIds.remove(noteId);
+        if (_selectedIds.isEmpty) {
+          _isSelectionMode = false;
+        }
+      } else {
+        _selectedIds.add(noteId);
+      }
+    });
+  }
+
+  void _exitSelectionMode() {
+    setState(() {
+      _selectedIds.clear();
+      _isSelectionMode = false;
+    });
+  }
+
+  void _selectAll(List<NoteModel> notes) {
+    setState(() {
+      _selectedIds
+        ..clear()
+        ..addAll(notes.map((n) => n.id));
+      _isSelectionMode = true;
+    });
+  }
+
+  Future<void> _deleteSelected() async {
+    final count = _selectedIds.length;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('删除选中的笔记？'),
+        content: Text('将移入回收站 $count 篇笔记。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    for (final id in _selectedIds) {
+      await ref.read(notesProvider.notifier).deleteNote(id);
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('已移入回收站 $count 篇笔记')),
+      );
+    }
+    _exitSelectionMode();
+  }
+
+  Future<void> _exportSelected() async {
+    final notesAsync = ref.read(notesProvider);
+    final allNotes = notesAsync.valueOrNull ?? [];
+    final selectedNotes =
+        allNotes.where((n) => _selectedIds.contains(n.id)).toList();
+
+    if (selectedNotes.isEmpty) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(
+      const SnackBar(content: Text('正在导出...')),
+    );
+
+    try {
+      final exportService = ref.read(exportServiceProvider);
+      final result = await exportService.exportAllNotes(selectedNotes);
+
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('导出完成'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('成功导出 ${result.success}/${result.total} 篇笔记'),
+              if (result.errors.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  '失败 ${result.failed} 篇',
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ],
+              const SizedBox(height: 12),
+              const Text('导出路径：'),
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: SelectableText(
+                  result.directoryPath,
+                  style:
+                      const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('完成'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('导出失败: $e')),
+      );
+    }
+    _exitSelectionMode();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final notesAsync = ref.watch(filteredNotesProvider);
     final allNotesAsync = ref.watch(notesProvider);
     final tagsAsync = ref.watch(allTagsProvider);
@@ -31,35 +180,66 @@ class NotesListPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Flutter Notes'),
+        title: Text(_isSelectionMode
+            ? '已选 ${_selectedIds.length} 篇'
+            : 'Flutter Notes'),
+        leading: _isSelectionMode
+            ? IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: _exitSelectionMode,
+              )
+            : null,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.account_tree_outlined),
-            tooltip: '知识图谱',
-            onPressed: () => context.push(AppRouter.graph),
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline),
-            tooltip: '回收站',
-            onPressed: () => context.push(AppRouter.trash),
-          ),
-          IconButton(
-            icon: const Icon(Icons.search),
-            tooltip: '搜索笔记',
-            onPressed: () => context.push(AppRouter.search),
-          ),
-          IconButton(
-            icon: const Icon(Icons.more_vert),
-            tooltip: '更多',
-            onPressed: () => context.push(AppRouter.settings),
-          ),
+          if (_isSelectionMode) ...[
+            IconButton(
+              icon: const Icon(Icons.select_all),
+              tooltip: '全选',
+              onPressed: () {
+                final notes = notesAsync.valueOrNull ?? [];
+                if (_selectedIds.length == notes.length) {
+                  _exitSelectionMode();
+                } else {
+                  _selectAll(notes);
+                }
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.ios_share),
+              tooltip: '导出选中',
+              onPressed: _selectedIds.isEmpty ? null : _exportSelected,
+            ),
+            IconButton(
+              icon: Icon(Icons.delete_outline, color: Theme.of(context).colorScheme.error),
+              tooltip: '删除选中',
+              onPressed: _selectedIds.isEmpty ? null : _deleteSelected,
+            ),
+          ] else ...[
+            IconButton(
+              icon: const Icon(Icons.account_tree_outlined),
+              tooltip: '知识图谱',
+              onPressed: () => context.push(AppRouter.graph),
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete_outline),
+              tooltip: '回收站',
+              onPressed: () => context.push(AppRouter.trash),
+            ),
+            IconButton(
+              icon: const Icon(Icons.search),
+              tooltip: '搜索笔记',
+              onPressed: () => context.push(AppRouter.search),
+            ),
+            IconButton(
+              icon: const Icon(Icons.more_vert),
+              tooltip: '更多',
+              onPressed: () => context.push(AppRouter.settings),
+            ),
+          ],
         ],
       ),
       body: Column(
         children: [
-          // 标签过滤栏（有标签时显示）
-          if (hasTags) const TagFilterBar(),
-          // 笔记列表
+          if (hasTags && !_isSelectionMode) const TagFilterBar(),
           Expanded(
             child: allNotesAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -82,11 +262,13 @@ class NotesListPage extends ConsumerWidget {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _createNote(context),
-        icon: const Icon(Icons.add),
-        label: const Text('新建笔记'),
-      ),
+      floatingActionButton: _isSelectionMode
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: () => _createNote(context),
+              icon: const Icon(Icons.add),
+              label: const Text('新建笔记'),
+            ),
     );
   }
 
@@ -102,11 +284,14 @@ class NotesListPage extends ConsumerWidget {
       cacheExtent: 500,
       itemBuilder: (context, index) {
         final note = notes[index];
+        final isSelected = _selectedIds.contains(note.id);
         return Padding(
           padding: const EdgeInsets.only(bottom: 8),
           child: Dismissible(
             key: ValueKey(note.id),
-            direction: DismissDirection.endToStart,
+            direction: _isSelectionMode
+                ? DismissDirection.none
+                : DismissDirection.endToStart,
             background: Container(
               alignment: Alignment.centerRight,
               padding: const EdgeInsets.only(right: 24),
@@ -122,8 +307,22 @@ class NotesListPage extends ConsumerWidget {
             onDismissed: (_) => _deleteNote(context, ref, note),
             child: NoteCard(
               note: note,
-              onTap: () => _openNote(context, note),
-              onLongPress: () => _showNoteOptions(context, ref, note),
+              isSelected: _isSelectionMode && isSelected,
+              showCheckbox: _isSelectionMode,
+              onTap: () {
+                if (_isSelectionMode) {
+                  _toggleSelection(note.id);
+                } else {
+                  _openNote(context, note);
+                }
+              },
+              onLongPress: () {
+                if (_isSelectionMode) {
+                  _toggleSelection(note.id);
+                } else {
+                  _enterSelectionMode(note.id);
+                }
+              },
             ),
           ),
         );
@@ -187,54 +386,6 @@ class NotesListPage extends ConsumerWidget {
           onPressed: () {
             ref.read(notesProvider.notifier).restoreNote(note.id);
           },
-        ),
-      ),
-    );
-  }
-
-  void _showNoteOptions(
-    BuildContext context,
-    WidgetRef ref,
-    NoteModel note,
-  ) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.copy_outlined),
-              title: const Text('复制内容'),
-              onTap: () => Navigator.pop(context),
-            ),
-            ListTile(
-              leading: const Icon(Icons.share_outlined),
-              title: const Text('分享'),
-              onTap: () => Navigator.pop(context),
-            ),
-            ListTile(
-              leading: const Icon(Icons.archive_outlined),
-              title: const Text('归档'),
-              onTap: () => Navigator.pop(context),
-            ),
-            ListTile(
-              leading: Icon(
-                Icons.delete_outline,
-                color: Theme.of(context).colorScheme.error,
-              ),
-              title: Text(
-                '删除',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.error,
-                ),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                _deleteNote(context, ref, note);
-              },
-            ),
-          ],
         ),
       ),
     );

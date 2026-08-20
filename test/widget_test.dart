@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:drift/drift.dart';
-import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:flutter_notes/core/router/app_router.dart';
@@ -44,6 +43,8 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  // ── 笔记列表页测试 ──
+
   testWidgets('Notes list renders with title, FAB and tag filter', (tester) async {
     await pumpApp(tester);
 
@@ -82,6 +83,8 @@ void main() {
     expect(find.text('Hello World'), findsOneWidget);
   });
 
+  // ── 搜索页测试 ──
+
   testWidgets('Search page shows search bar and empty state', (tester) async {
     await pumpApp(tester);
 
@@ -110,6 +113,8 @@ void main() {
     expect(find.text('Dart 3 空安全实践'), findsOneWidget);
   });
 
+  // ── 设置页测试 ──
+
   testWidgets('Settings page shows theme mode selector', (tester) async {
     await pumpApp(tester);
 
@@ -131,5 +136,170 @@ void main() {
       100,
     );
     expect(find.text('版本'), findsOneWidget);
+  });
+
+  // ── go_router 路由测试 ──
+
+  testWidgets('Router navigates to trash page', (tester) async {
+    await pumpApp(tester);
+
+    // 点击回收站按钮
+    await tester.tap(find.byTooltip('回收站'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('回收站'), findsOneWidget);
+  });
+
+  testWidgets('Router navigates to settings page via more button', (tester) async {
+    await pumpApp(tester);
+
+    await tester.tap(find.byTooltip('更多'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('设置'), findsOneWidget);
+  });
+
+  testWidgets('Router navigates to graph page', (tester) async {
+    await pumpApp(tester);
+
+    await tester.tap(find.byTooltip('知识图谱'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('知识图谱'), findsOneWidget);
+  });
+
+  // ── 编辑器图片插入测试 ──
+
+  testWidgets('Editor image dialog inserts Markdown image syntax', (tester) async {
+    await pumpApp(tester);
+
+    // 打开编辑器
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+
+    // 点击图片工具栏按钮
+    await tester.tap(find.byTooltip('图片'));
+    await tester.pumpAndSettle();
+
+    // 应显示图片插入对话框
+    expect(find.text('插入图片'), findsOneWidget);
+
+    // 通过 labelText 精确定位对话框中的输入框
+    final urlField = find.byWidgetPredicate(
+      (widget) =>
+          widget is TextField &&
+          widget.decoration?.labelText == '图片 URL',
+    );
+    final altField = find.byWidgetPredicate(
+      (widget) =>
+          widget is TextField &&
+          widget.decoration?.labelText == '替代文本',
+    );
+
+    await tester.enterText(urlField, 'https://example.com/photo.png');
+    await tester.enterText(altField, '示例图片');
+    await tester.pump();
+
+    // 点击插入按钮
+    await tester.tap(find.text('插入'));
+    await tester.pumpAndSettle();
+
+    // 内容输入框应包含 Markdown 图片语法
+    final contentField = find.byWidgetPredicate(
+      (widget) =>
+          widget is TextField &&
+          widget.decoration?.hintText?.contains('Markdown') == true,
+    );
+    final contentText =
+        tester.widget<TextField>(contentField).controller!.text;
+    expect(contentText, contains('![示例图片](https://example.com/photo.png)'));
+  });
+
+  // ── 笔记列表批量操作测试 ──
+
+  testWidgets('Long press note enters selection mode', (tester) async {
+    await pumpApp(tester);
+
+    // 长按第一条笔记
+    final noteCard = find.byType(Dismissible);
+    await tester.longPress(noteCard.first);
+    await tester.pumpAndSettle();
+
+    // 应进入选择模式，标题显示"已选 1 篇"
+    expect(find.text('已选 1 篇'), findsOneWidget);
+    // 应显示全选、导出和删除按钮
+    expect(find.byTooltip('全选'), findsOneWidget);
+    expect(find.byTooltip('导出选中'), findsOneWidget);
+    expect(find.byTooltip('删除选中'), findsOneWidget);
+    // FAB 应隐藏
+    expect(find.byType(FloatingActionButton), findsNothing);
+  });
+
+  testWidgets('Select all selects all notes and deselect exits mode', (tester) async {
+    await pumpApp(tester);
+
+    // 长按进入选择模式
+    final noteCard = find.byType(Dismissible);
+    await tester.longPress(noteCard.first);
+    await tester.pumpAndSettle();
+
+    // 点击全选
+    await tester.tap(find.byTooltip('全选'));
+    await tester.pumpAndSettle();
+
+    // 应选中所有笔记（种子数据有 6 条）
+    expect(find.text('已选 6 篇'), findsOneWidget);
+
+    // 再次点击全选退出
+    await tester.tap(find.byTooltip('全选'));
+    await tester.pumpAndSettle();
+
+    // 应退出选择模式
+    expect(find.text('Flutter Notes'), findsOneWidget);
+    expect(find.byType(FloatingActionButton), findsOneWidget);
+  });
+
+  testWidgets('Close button exits selection mode', (tester) async {
+    await pumpApp(tester);
+
+    // 长按进入选择模式
+    final noteCard = find.byType(Dismissible);
+    await tester.longPress(noteCard.first);
+    await tester.pumpAndSettle();
+
+    // 点击关闭按钮
+    await tester.tap(find.byIcon(Icons.close));
+    await tester.pumpAndSettle();
+
+    // 应退出选择模式
+    expect(find.text('Flutter Notes'), findsOneWidget);
+    expect(find.byType(FloatingActionButton), findsOneWidget);
+  });
+
+  // ── 图谱搜索测试 ──
+
+  testWidgets('Graph page shows search bar', (tester) async {
+    await pumpApp(tester);
+
+    await tester.tap(find.byTooltip('知识图谱'));
+    await tester.pumpAndSettle();
+
+    // 应显示搜索框
+    expect(find.byType(TextField), findsOneWidget);
+    expect(find.text('搜索节点标题或标签...'), findsOneWidget);
+  });
+
+  testWidgets('Graph search shows match count', (tester) async {
+    await pumpApp(tester);
+
+    await tester.tap(find.byTooltip('知识图谱'));
+    await tester.pumpAndSettle();
+
+    // 输入搜索关键词
+    await tester.enterText(find.byType(TextField), 'Dart');
+    await tester.pumpAndSettle();
+
+    // 应显示匹配结果计数
+    expect(find.textContaining('匹配'), findsOneWidget);
   });
 }

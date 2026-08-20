@@ -10,17 +10,22 @@ import '../models/graph_data.dart';
 /// - 节点拖拽（单指拖拽节点）
 /// - 长按节点进入多选模式
 /// - 点击节点跳转到笔记编辑器
+/// - 搜索高亮（非匹配节点变暗）
 class GraphCanvas extends StatefulWidget {
   const GraphCanvas({
     super.key,
     required this.data,
     this.onNodeTap,
     this.onSelectionChanged,
+    this.highlightedIds = const {},
+    this.hasSearch = false,
   });
 
   final GraphData data;
   final void Function(GraphNode)? onNodeTap;
   final void Function(Set<String> selected)? onSelectionChanged;
+  final Set<String> highlightedIds;
+  final bool hasSearch;
 
   @override
   State<GraphCanvas> createState() => _GraphCanvasState();
@@ -118,6 +123,8 @@ class _GraphCanvasState extends State<GraphCanvas> {
             selectedIds: _selectedIds,
             isSelectionMode: _isSelectionMode,
             draggedNodeId: _draggedNode?.id,
+            highlightedIds: widget.highlightedIds,
+            hasSearch: widget.hasSearch,
           ),
           child: Container(),
         ),
@@ -150,6 +157,8 @@ class _GraphPainter extends CustomPainter {
     required this.selectedIds,
     required this.isSelectionMode,
     required this.draggedNodeId,
+    required this.highlightedIds,
+    required this.hasSearch,
   });
 
   final GraphData data;
@@ -159,6 +168,8 @@ class _GraphPainter extends CustomPainter {
   final Set<String> selectedIds;
   final bool isSelectionMode;
   final String? draggedNodeId;
+  final Set<String> highlightedIds;
+  final bool hasSearch;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -179,6 +190,11 @@ class _GraphPainter extends CustomPainter {
       ..strokeWidth = 2.5
       ..strokeCap = StrokeCap.round;
 
+    final dimmedEdgePaint = Paint()
+      ..color = colorScheme.outline.withValues(alpha: 0.08)
+      ..strokeWidth = 1.0
+      ..strokeCap = StrokeCap.round;
+
     final labelStyle = TextStyle(
       fontSize: 9,
       color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
@@ -188,16 +204,26 @@ class _GraphPainter extends CustomPainter {
       final source = data.nodes.firstWhere((n) => n.id == edge.sourceId);
       final target = data.nodes.firstWhere((n) => n.id == edge.targetId);
 
-      final isHighlighted = selectedIds.contains(source.id) ||
+      final isSelected = selectedIds.contains(source.id) ||
           selectedIds.contains(target.id);
+
+      final isHighlighted = hasSearch &&
+          highlightedIds.contains(source.id) &&
+          highlightedIds.contains(target.id);
+
+      final isDimmed = hasSearch && !isHighlighted;
 
       canvas.drawLine(
         Offset(source.x, source.y),
         Offset(target.x, target.y),
-        isHighlighted ? selectedEdgePaint : edgePaint,
+        isSelected
+            ? selectedEdgePaint
+            : isDimmed
+                ? dimmedEdgePaint
+                : edgePaint,
       );
 
-      if (!isHighlighted) {
+      if (!isSelected && !isDimmed) {
         final midX = (source.x + target.x) / 2;
         final midY = (source.y + target.y) / 2;
         final labelSpan = TextSpan(text: edge.label, style: labelStyle);
@@ -217,6 +243,7 @@ class _GraphPainter extends CustomPainter {
       final color = _priorityColor(node.priority, colorScheme);
       final isSelected = selectedIds.contains(node.id);
       final isDragged = node.id == draggedNodeId;
+      final isMatched = !hasSearch || highlightedIds.contains(node.id);
 
       // 选中节点的光晕
       if (isSelected || isDragged) {
@@ -230,9 +257,25 @@ class _GraphPainter extends CustomPainter {
         );
       }
 
+      // 搜索匹配高亮光晕
+      if (hasSearch && isMatched) {
+        final highlightPaint = Paint()
+          ..color = colorScheme.tertiary.withValues(alpha: 0.25)
+          ..style = PaintingStyle.fill;
+        canvas.drawCircle(
+          Offset(node.x, node.y),
+          node.radius + 6,
+          highlightPaint,
+        );
+      }
+
       // 节点圆形
       final nodePaint = Paint()
-        ..color = isSelected ? colorScheme.primary : color
+        ..color = isSelected
+            ? colorScheme.primary
+            : isMatched
+                ? color
+                : color.withValues(alpha: 0.25)
         ..style = PaintingStyle.fill;
       canvas.drawCircle(
         Offset(node.x, node.y),
@@ -244,7 +287,9 @@ class _GraphPainter extends CustomPainter {
       final borderPaint = Paint()
         ..color = isSelected
             ? colorScheme.primary
-            : colorScheme.surface
+            : isMatched
+                ? colorScheme.surface
+                : colorScheme.surface.withValues(alpha: 0.3)
         ..style = PaintingStyle.stroke
         ..strokeWidth = isSelected ? 3 : 2;
       canvas.drawCircle(
@@ -291,7 +336,9 @@ class _GraphPainter extends CustomPainter {
           fontSize: 10,
           color: isSelected
               ? colorScheme.primary
-              : colorScheme.onSurface,
+              : isMatched
+                  ? colorScheme.onSurface
+                  : colorScheme.onSurface.withValues(alpha: 0.3),
           fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
         ),
       );
@@ -319,7 +366,9 @@ class _GraphPainter extends CustomPainter {
         oldDelegate.data != data ||
         oldDelegate.selectedIds != selectedIds ||
         oldDelegate.isSelectionMode != isSelectionMode ||
-        oldDelegate.draggedNodeId != draggedNodeId;
+        oldDelegate.draggedNodeId != draggedNodeId ||
+        oldDelegate.highlightedIds != highlightedIds ||
+        oldDelegate.hasSearch != hasSearch;
   }
 
   Color _priorityColor(int priority, ColorScheme colorScheme) {

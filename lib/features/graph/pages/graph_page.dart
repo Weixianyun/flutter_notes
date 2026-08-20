@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../notes/providers/notes_provider.dart';
+import '../models/graph_data.dart';
 import '../providers/graph_provider.dart';
 import '../widgets/graph_canvas.dart';
 
@@ -15,6 +16,7 @@ import '../widgets/graph_canvas.dart';
 /// - 平移、缩放、节点拖拽
 /// - 长按节点进入多选模式
 /// - 多选后可批量删除或跳转
+/// - 搜索节点（按标题或标签高亮匹配）
 class GraphPage extends ConsumerStatefulWidget {
   const GraphPage({super.key});
 
@@ -23,12 +25,15 @@ class GraphPage extends ConsumerStatefulWidget {
 }
 
 class _GraphPageState extends ConsumerState<GraphPage> {
-  Set<String> _selectedIds = {};
+  final Set<String> _selectedIds = {};
   bool _isSelectionMode = false;
+  String _searchQuery = '';
 
   void _onSelectionChanged(Set<String> selected) {
     setState(() {
-      _selectedIds = selected;
+      _selectedIds
+        ..clear()
+        ..addAll(selected);
       _isSelectionMode = selected.isNotEmpty;
     });
   }
@@ -46,7 +51,7 @@ class _GraphPageState extends ConsumerState<GraphPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('删除选中的笔记？'),
-        content: Text('将删除 $count 篇笔记，此操作不可撤销。'),
+        content: Text('将移入回收站 $count 篇笔记。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -70,7 +75,7 @@ class _GraphPageState extends ConsumerState<GraphPage> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('已删除 $count 篇笔记')),
+        SnackBar(content: Text('已移入回收站 $count 篇笔记')),
       );
     }
   }
@@ -81,6 +86,19 @@ class _GraphPageState extends ConsumerState<GraphPage> {
       _exitSelectionMode();
       context.push(AppRouter.editor, extra: id);
     }
+  }
+
+  Set<String> _getHighlightedIds(GraphData graph) {
+    if (_searchQuery.isEmpty) return {};
+    final query = _searchQuery.toLowerCase();
+    final ids = <String>{};
+    for (final node in graph.nodes) {
+      if (node.title.toLowerCase().contains(query) ||
+          node.tags.any((t) => t.toLowerCase().contains(query))) {
+        ids.add(node.id);
+      }
+    }
+    return ids;
   }
 
   @override
@@ -147,10 +165,15 @@ class _GraphPageState extends ConsumerState<GraphPage> {
             padding: 60,
           );
 
+          final highlightedIds = _getHighlightedIds(graph);
+          final hasSearch = _searchQuery.isNotEmpty;
+
           return Stack(
             children: [
               GraphCanvas(
                 data: graph,
+                highlightedIds: highlightedIds,
+                hasSearch: hasSearch,
                 onNodeTap: (node) {
                   if (!_isSelectionMode) {
                     context.push(
@@ -161,6 +184,39 @@ class _GraphPageState extends ConsumerState<GraphPage> {
                 },
                 onSelectionChanged: _onSelectionChanged,
               ),
+              // 搜索栏
+              Positioned(
+                top: 8,
+                left: 16,
+                right: 16,
+                child: _SearchBar(
+                  query: _searchQuery,
+                  onChanged: (value) => setState(() => _searchQuery = value),
+                ),
+              ),
+              // 搜索结果计数
+              if (hasSearch)
+                Positioned(
+                  top: 56,
+                  left: 16,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color:
+                          colorScheme.surfaceContainerHighest.withValues(alpha: 0.9),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      highlightedIds.isEmpty
+                          ? '无匹配节点'
+                          : '匹配 ${highlightedIds.length} 个节点',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ),
               // 统计信息
               Positioned(
                 left: 16,
@@ -201,7 +257,7 @@ class _GraphPageState extends ConsumerState<GraphPage> {
               // 多选模式提示
               if (_isSelectionMode)
                 Positioned(
-                  top: 16,
+                  top: 56,
                   left: 0,
                   right: 0,
                   child: Center(
@@ -281,6 +337,19 @@ class _GraphPageState extends ConsumerState<GraphPage> {
                 ),
               ],
             ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.search, size: 16, color: colorScheme.outline),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '搜索栏按标题或标签筛选节点',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
         actions: [
@@ -289,6 +358,47 @@ class _GraphPageState extends ConsumerState<GraphPage> {
             child: const Text('关闭'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SearchBar extends StatelessWidget {
+  const _SearchBar({required this.query, required this.onChanged});
+
+  final String query;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: colorScheme.shadow.withValues(alpha: 0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: TextField(
+        onChanged: onChanged,
+        textInputAction: TextInputAction.search,
+        decoration: InputDecoration(
+          hintText: '搜索节点标题或标签...',
+          prefixIcon: const Icon(Icons.search, size: 20),
+          suffixIcon: query.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear, size: 18),
+                  onPressed: () => onChanged(''),
+                )
+              : null,
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        ),
       ),
     );
   }

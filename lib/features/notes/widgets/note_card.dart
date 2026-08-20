@@ -7,18 +7,23 @@ import '../../../data/models/note_model.dart';
 /// 笔记卡片组件
 ///
 /// 在列表中展示单条笔记的标题、摘要、标签和更新时间。
-/// 支持点击进入编辑、长按弹出操作菜单。
+/// 支持点击进入编辑、长按进入多选模式。
+/// 多选模式下显示复选框和选中高亮。
 class NoteCard extends StatelessWidget {
   const NoteCard({
     super.key,
     required this.note,
     this.onTap,
     this.onLongPress,
+    this.isSelected = false,
+    this.showCheckbox = false,
   });
 
   final NoteModel note;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
+  final bool isSelected;
+  final bool showCheckbox;
 
   @override
   Widget build(BuildContext context) {
@@ -27,64 +32,86 @@ class NoteCard extends StatelessWidget {
     final dateFormat = DateFormat('MM/dd HH:mm');
 
     return Card(
+      color: isSelected ? colorScheme.primaryContainer : null,
       child: InkWell(
         onTap: onTap,
         onLongPress: onLongPress,
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Column(
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── 标题行 ──
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      note.title.isEmpty ? '无标题' : note.title,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+              if (showCheckbox) ...[
+                Padding(
+                  padding: const EdgeInsets.only(top: 2, right: 12),
+                  child: Icon(
+                    isSelected
+                        ? Icons.check_circle
+                        : Icons.radio_button_unchecked,
+                    size: 22,
+                    color: isSelected
+                        ? colorScheme.primary
+                        : colorScheme.outline,
                   ),
-                  const SizedBox(width: 8),
-                  _PriorityDot(priority: note.priority),
-                ],
-              ),
-              // ── 摘要 ──
-              if (note.content.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(
-                  note.excerpt,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ],
-              // ── 底部信息行 ──
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Icon(
-                    Icons.schedule,
-                    size: 14,
-                    color: colorScheme.outline,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    dateFormat.format(note.updatedAt),
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: colorScheme.outline,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ── 标题行 ──
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            note.title.isEmpty ? '无标题' : note.title,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        _PriorityDot(priority: note.priority),
+                      ],
                     ),
-                  ),
-                  const Spacer(),
-                  if (note.tags.isNotEmpty)
-                    _TagChips(tags: note.tags.take(3).toList()),
-                ],
+                    // ── 摘要 ──
+                    if (note.content.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        note.excerpt,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                    // ── 底部信息行 ──
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.schedule,
+                          size: 14,
+                          color: colorScheme.outline,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          dateFormat.format(note.updatedAt),
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: colorScheme.outline,
+                          ),
+                        ),
+                        const Spacer(),
+                        if (note.tags.isNotEmpty)
+                          _TagChips(tags: note.tags.take(3).toList()),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
