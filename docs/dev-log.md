@@ -1019,3 +1019,111 @@ b5b69f5 feat: Week 1 Day 3 - search, tag management, settings page
 - go_router 路由迁移（声明式路由 + 深链接）
 - 笔记编辑器增强（图片插入、代码高亮）
 - 应用性能优化（列表懒加载、数据库索引）
+
+## 2026-08-20 | Week 3 Day 1 — go_router 迁移 + 编辑器增强 + 性能优化
+
+### 今日完成
+
+#### 1. go_router 声明式路由迁移
+
+##### 路由配置重构 (`lib/core/router/app_router.dart`)
+- 从 Flutter 内置 `Navigator.pushNamed` 迁移至 `go_router` 声明式路由
+- 8 条路由路径常量：`/` / `/editor` / `/search` / `/settings` / `/graph` / `/github-login` / `/sync-settings` / `/trash`
+- `GoRouter` 配置：`initialLocation` + `routes` 列表 + `errorBuilder`（404 页面）
+- 新增 `createRouter()` 工厂方法，支持测试中创建独立路由实例（避免单例状态污染）
+- 静态单例 `_router` 改为 `createRouter()` 调用
+
+##### 全应用导航替换
+- `notes_list_page.dart`：`Navigator.pushNamed` → `context.push(AppRouter.xxx)`
+- `note_editor_page.dart`：`Navigator.pushNamed` → `context.push(AppRouter.editor, extra: noteId)`
+- `search_page.dart`：搜索结果点击跳转 → `context.push(AppRouter.editor, extra: note.id)`
+- `graph_page.dart`：节点点击跳转 → `context.push(AppRouter.editor, extra: note.id)`
+- `settings_page.dart`：各入口跳转 → `context.push(AppRouter.xxx)`
+- `sync_settings_page.dart`：GitHub 登录跳转 → `context.push(AppRouter.githubLogin)`
+- `trash_page.dart`：恢复后跳转 → `context.push(AppRouter.editor, extra: note.id)`
+
+##### 应用根组件 (`lib/app.dart`)
+- `MaterialApp` → `MaterialApp.router`，使用 `routerConfig: AppRouter.router`
+- 支持深链接：外部可通过 URL 直接访问特定页面
+
+#### 2. 笔记编辑器增强
+
+##### 图片插入功能 (`lib/features/editor/pages/note_editor_page.dart`)
+- 工具栏新增图片按钮（`Icons.image_outlined`）
+- `_showImageDialog()`：弹窗输入图片 URL 和替代文本
+- 插入 Markdown 语法 `![alt](url)` 到光标位置
+- `_insertAtCursor()`：在当前光标位置插入文本
+
+##### 代码语法高亮 (`lib/features/editor/widgets/markdown_preview.dart`)
+- 引入 `flutter_highlight` 包，替换 `SelectableText` 为 `HighlightView`
+- 亮色主题：`githubTheme`（GitHub 风格浅色）
+- 暗色主题：`atomOneDarkTheme`（Atom One Dark 风格深色）
+- 代码块显示语言标签（从 `class` 属性提取）
+- 等宽字体 + 1.5 行高 + 圆角背景容器
+
+##### 依赖添加 (`pubspec.yaml`)
+- `go_router: ^14.6.0`
+- `flutter_highlight: ^0.7.0`
+- `highlight: ^0.7.0`
+
+#### 3. 应用性能优化
+
+##### 数据库索引 (`lib/data/database/app_database.dart`)
+- schemaVersion 升级至 3
+- 新增 `_createIndexes(Migrator m)` 方法，创建 3 个索引：
+  - `idx_notes_deleted_at`：优化软删除过滤查询
+  - `idx_notes_updated_at`：优化按更新时间排序
+  - `idx_notes_priority`：优化按优先级筛选
+- `onUpgrade` 迁移：`from < 3` 时自动创建索引
+- `onCreate` 中也调用 `_createIndexes` 确保新安装时建索引
+
+##### 列表懒加载优化 (`lib/features/notes/pages/notes_list_page.dart`)
+- `ListView.builder` 添加 `cacheExtent: 500`（预渲染 500 像素的列表项）
+- 减少滚动时的频繁构建，提升列表滑动流畅度
+- `// ignore: deprecated_member_use` 抑制 cacheExtent 弃用警告
+
+#### 4. 测试修复
+
+##### GoRouter 单例测试隔离 (`test/widget_test.dart`)
+- **问题**：`AppRouter.router` 为静态单例，测试间路由状态不重置。Test 2 导航至 `/editor` 后，后续测试仍停留在编辑器页面，找不到首页 FAB 和导航图标
+- **修复**：`pumpApp` 中使用 `AppRouter.createRouter()` 创建独立路由实例，替代 `FlutterNotesApp` 直接构建 `MaterialApp.router`
+- 移除 `FlutterNotesApp` 导入，直接使用 `MaterialApp.router` + `AppTheme` + `AppRouter.createRouter()`
+- 98 项测试全部通过（94 项已有 + 4 项修复的 widget 测试）
+
+### 验证结果
+- `flutter analyze`: No issues found (0 errors, 0 warnings)
+- `flutter test`: All tests passed! (98 tests)
+
+### 遇到的问题及解决
+
+#### 问题 1: GoRouter 单例导致 widget 测试失败
+- **现象**：4 项 widget 测试失败（Editor preview toggle / Search page / Search filters / Settings page）
+- **原因**：`GoRouter` 为 `static final` 单例，测试间路由状态持久化。Test 2 导航到 `/editor` 后，后续测试的 `pumpApp` 虽然重建 widget 树，但路由仍停留在 `/editor`，首页元素（FAB、搜索图标、更多按钮）不存在
+- **解决**：将路由配置抽取为 `createRouter()` 工厂方法，测试中每次 `pumpApp` 创建独立 `GoRouter` 实例
+
+#### 问题 2: flutter_highlight 主题导入路径
+- **现象**：`package:flutter_highlight/themes/github-dark.dart` 导入报错
+- **原因**：`flutter_highlight` 包不含 `github-dark.dart` 文件
+- **解决**：改用 `atom-one-dark.dart` 作为深色主题
+
+#### 问题 3: cacheExtent 弃用警告
+- **现象**：`cacheExtent` 在新版 Flutter 中标记为 `@Deprecated`
+- **原因**：Flutter 推荐使用 `CacheExtent` 替代，但当前版本仍可用
+- **解决**：添加 `// ignore: deprecated_member_use` 注释暂时抑制，后续升级时替换
+
+### 技术决策
+- **go_router vs Navigator**：go_router 提供声明式路由配置、深链接支持、URL 同步、更好的可测试性，是 Flutter 官方推荐的路由方案
+- **createRouter() 工厂方法**：将路由配置与单例解耦，生产环境使用单例（性能），测试环境使用工厂（隔离）
+- **flutter_highlight 主题**：选择 GitHub light + Atom One Dark 组合，与代码编辑器视觉习惯一致
+- **数据库索引策略**：针对 `deleted_at`（软删除过滤）、`updated_at`（排序）、`priority`（筛选）三个高频查询条件建索引，覆盖主要查询路径
+- **cacheExtent 优化**：500 像素预渲染约 5-6 个笔记卡片，在流畅度和内存占用间取得平衡
+
+### Git 提交记录
+```
+(commit 待提交)
+```
+
+### 明日计划 (Week 3 Day 2)
+- Widget 测试增强（go_router 路由测试、编辑器图片插入测试）
+- 知识图谱节点搜索功能
+- 笔记批量操作（多选删除/导出）

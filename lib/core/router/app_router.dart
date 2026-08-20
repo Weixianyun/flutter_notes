@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../features/editor/pages/note_editor_page.dart';
 import '../../features/graph/pages/graph_page.dart';
@@ -11,8 +12,8 @@ import '../../features/sync/pages/sync_settings_page.dart';
 
 /// 应用路由配置
 ///
-/// 使用 Flutter 内置命名路由。后续 Week 3 引入 go_router 后
-/// 可平滑迁移至声明式路由方案。
+/// 使用 go_router 声明式路由，支持深链接和嵌套路由。
+/// 路由路径常量通过 [AppRouter] 静态属性暴露。
 class AppRouter {
   AppRouter._();
 
@@ -26,34 +27,56 @@ class AppRouter {
   static const String syncSettings = '/sync-settings';
   static const String trash = '/trash';
 
-  /// 路由表生成
-  static Map<String, WidgetBuilder> get routes => {
-        home: (_) => const NotesListPage(),
-        editor: (context) => NoteEditorPage(
-              noteId: ModalRoute.of(context)?.settings.arguments as String?,
-            ),
-        search: (_) => const SearchPage(),
-        settings: (_) => const SettingsPage(),
-        graph: (_) => const GraphPage(),
-        githubLogin: (_) => const GitHubLoginPage(),
-        syncSettings: (_) => const SyncSettingsPage(),
-        trash: (_) => const TrashPage(),
-      };
+  /// 构建 GoRouter 配置
+  static GoRouter get router => _router;
 
-  /// 生成路由（支持转场动画）
-  static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
-    final builder = routes[settings.name];
-    if (builder == null) {
-      return MaterialPageRoute(
-        builder: (_) => Scaffold(
+  static final GoRouter _router = createRouter();
+
+  /// 创建独立的 GoRouter 实例
+  ///
+  /// 测试中调用此方法可避免单例路由状态在测试间互相影响。
+  static GoRouter createRouter() => GoRouter(
+        initialLocation: home,
+        routes: [
+          GoRoute(
+            path: home,
+            builder: (context, state) => const NotesListPage(),
+          ),
+          GoRoute(
+            path: editor,
+            builder: (context, state) => NoteEditorPage(
+              noteId: state.extra as String?,
+            ),
+          ),
+          GoRoute(
+            path: search,
+            builder: (context, state) => const SearchPage(),
+          ),
+          GoRoute(
+            path: settings,
+            builder: (context, state) => const SettingsPage(),
+          ),
+          GoRoute(
+            path: graph,
+            builder: (context, state) => const GraphPage(),
+          ),
+          GoRoute(
+            path: githubLogin,
+            builder: (context, state) => const GitHubLoginPage(),
+          ),
+          GoRoute(
+            path: syncSettings,
+            builder: (context, state) => const SyncSettingsPage(),
+          ),
+          GoRoute(
+            path: trash,
+            builder: (context, state) => const TrashPage(),
+          ),
+        ],
+        errorBuilder: (context, state) => Scaffold(
           appBar: AppBar(title: const Text('页面不存在')),
-          body: const Center(child: Text('404')),
+          body: Center(
+              child: Text('404: ${state.error?.message ?? "Unknown route"}')),
         ),
       );
-    }
-    return MaterialPageRoute(
-      builder: builder,
-      settings: settings,
-    );
-  }
 }

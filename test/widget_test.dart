@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:drift/drift.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:flutter_notes/app.dart';
+import 'package:flutter_notes/core/router/app_router.dart';
+import 'package:flutter_notes/core/theme/app_theme.dart';
 import 'package:flutter_notes/data/database/app_database.dart';
 import 'package:flutter_notes/data/database/database_provider.dart';
 import 'package:flutter_notes/services/service_providers.dart';
@@ -28,7 +30,14 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: overrides,
-        child: const FlutterNotesApp(),
+        child: MaterialApp.router(
+          title: 'Flutter Notes',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.light(),
+          darkTheme: AppTheme.dark(),
+          themeMode: ThemeMode.light,
+          routerConfig: AppRouter.createRouter(),
+        ),
       ),
     );
     // 等待数据库初始化和种子数据加载

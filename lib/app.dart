@@ -7,8 +7,8 @@ import 'features/settings/providers/settings_provider.dart';
 
 /// Flutter Notes 应用根组件
 ///
-/// 集成 Material 3 主题系统（明暗双模式）与命名路由。
-/// 主题模式通过 [themeModeProvider] 动态切换。
+/// 集成 Material 3 主题系统（明暗双模式）与 go_router 声明式路由。
+/// 主题模式通过 [themeModeProvider] 动态切换，种子色通过 [seedColorProvider] 自定义。
 class FlutterNotesApp extends ConsumerWidget {
   const FlutterNotesApp({super.key});
 
@@ -17,14 +17,13 @@ class FlutterNotesApp extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
     final seedColor = ref.watch(seedColorProvider);
 
-    return MaterialApp(
+    return MaterialApp.router(
       title: 'Flutter Notes',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(seedColor: seedColor),
       darkTheme: AppTheme.dark(seedColor: seedColor),
       themeMode: themeMode,
-      initialRoute: AppRouter.home,
-      onGenerateRoute: AppRouter.onGenerateRoute,
+      routerConfig: AppRouter.router,
     );
   }
 }

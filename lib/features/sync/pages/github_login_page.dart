@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../../core/config/github_config.dart';
@@ -75,7 +76,7 @@ class _GitHubLoginPageState extends ConsumerState<GitHubLoginPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('GitHub 授权成功')),
         );
-        Navigator.of(context).pop(true);
+        context.pop(true);
       }
     } catch (e) {
       if (mounted) {

@@ -58,12 +58,13 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) async {
           await m.createAll();
+          await _createIndexes(m);
           await _createFts(m);
           await _seedData();
         },
@@ -73,8 +74,24 @@ class AppDatabase extends _$AppDatabase {
             await _createFts(m);
             await _populateFts();
           }
+          if (from < 3) {
+            await _createIndexes(m);
+          }
         },
       );
+
+  /// 创建数据库索引
+  Future<void> _createIndexes(Migrator m) async {
+    await m.database.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_notes_deleted_at ON notes(deleted_at)',
+    );
+    await m.database.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_notes_updated_at ON notes(updated_at)',
+    );
+    await m.database.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_notes_priority ON notes(priority)',
+    );
+  }
 
   /// 创建 FTS5 全文索引虚拟表和触发器
   Future<void> _createFts(Migrator m) async {

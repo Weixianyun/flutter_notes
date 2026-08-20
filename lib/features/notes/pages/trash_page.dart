@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../../data/models/note_model.dart';
@@ -126,10 +127,9 @@ class _TrashPageState extends ConsumerState<TrashPage> {
                   note: note,
                   onRestore: () => _restoreNote(note),
                   onPermanentlyDelete: () => _showPermanentDeleteConfirm(note),
-                  onTap: () => Navigator.pushNamed(
-                    context,
+                  onTap: () => context.push(
                     AppRouter.editor,
-                    arguments: note.id,
+                    extra: note.id,
                   ),
                 );
               },

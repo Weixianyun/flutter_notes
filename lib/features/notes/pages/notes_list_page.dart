@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../../data/models/note_model.dart';
@@ -35,23 +36,22 @@ class NotesListPage extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.account_tree_outlined),
             tooltip: '知识图谱',
-            onPressed: () => Navigator.pushNamed(context, AppRouter.graph),
+            onPressed: () => context.push(AppRouter.graph),
           ),
           IconButton(
             icon: const Icon(Icons.delete_outline),
             tooltip: '回收站',
-            onPressed: () => Navigator.pushNamed(context, AppRouter.trash),
+            onPressed: () => context.push(AppRouter.trash),
           ),
           IconButton(
             icon: const Icon(Icons.search),
             tooltip: '搜索笔记',
-            onPressed: () => Navigator.pushNamed(context, AppRouter.search),
+            onPressed: () => context.push(AppRouter.search),
           ),
           IconButton(
             icon: const Icon(Icons.more_vert),
             tooltip: '更多',
-            onPressed: () =>
-                Navigator.pushNamed(context, AppRouter.settings),
+            onPressed: () => context.push(AppRouter.settings),
           ),
         ],
       ),
@@ -98,6 +98,8 @@ class NotesListPage extends ConsumerWidget {
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
       itemCount: notes.length,
+      // ignore: deprecated_member_use
+      cacheExtent: 500,
       itemBuilder: (context, index) {
         final note = notes[index];
         return Padding(
@@ -164,11 +166,11 @@ class NotesListPage extends ConsumerWidget {
   }
 
   void _createNote(BuildContext context) {
-    Navigator.pushNamed(context, AppRouter.editor);
+    context.push(AppRouter.editor);
   }
 
   void _openNote(BuildContext context, NoteModel note) {
-    Navigator.pushNamed(context, AppRouter.editor, arguments: note.id);
+    context.push(AppRouter.editor, extra: note.id);
   }
 
   void _deleteNote(

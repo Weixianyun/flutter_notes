@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../../shared/widgets/empty_state.dart';
@@ -78,7 +79,7 @@ class _GraphPageState extends ConsumerState<GraphPage> {
     if (_selectedIds.length == 1) {
       final id = _selectedIds.first;
       _exitSelectionMode();
-      Navigator.pushNamed(context, AppRouter.editor, arguments: id);
+      context.push(AppRouter.editor, extra: id);
     }
   }
 
@@ -134,8 +135,7 @@ class _GraphPageState extends ConsumerState<GraphPage> {
               title: '暂无笔记',
               subtitle: '创建笔记并添加标签后，\n图谱将展示笔记间的关联关系',
               actionLabel: '新建笔记',
-              onAction: () =>
-                  Navigator.pushNamed(context, AppRouter.editor),
+              onAction: () => context.push(AppRouter.editor),
             );
           }
 
@@ -153,10 +153,9 @@ class _GraphPageState extends ConsumerState<GraphPage> {
                 data: graph,
                 onNodeTap: (node) {
                   if (!_isSelectionMode) {
-                    Navigator.pushNamed(
-                      context,
+                    context.push(
                       AppRouter.editor,
-                      arguments: node.id,
+                      extra: node.id,
                     );
                   }
                 },

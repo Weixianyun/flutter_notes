@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../../data/models/note_model.dart';
@@ -131,10 +132,9 @@ class _SearchPageState extends ConsumerState<SearchPage> {
             note: note,
             onTap: () {
               _onSubmit(ref.read(searchQueryProvider));
-              Navigator.pushNamed(
-                context,
+              context.push(
                 AppRouter.editor,
-                arguments: note.id,
+                extra: note.id,
               );
             },
           ),

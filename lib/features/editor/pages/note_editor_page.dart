@@ -295,8 +295,6 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
     Navigator.of(context).pop();
   }
 
-  // ── 导出 ──
-
   Future<void> _exportCurrentNote() async {
     final note = await ref.read(notesProvider.notifier).getNoteById(widget.noteId!);
     if (note == null) return;
@@ -489,10 +487,16 @@ class _MarkdownToolbar extends StatelessWidget {
             onTap: () => _wrapSelection('[', '](url)'),
           ),
           _ToolButton(
+            icon: Icons.image_outlined,
+            tooltip: '图片',
+            color: colorScheme.primary,
+            onTap: () => _showImageDialog(context),
+          ),
+          _ToolButton(
             icon: Icons.horizontal_rule,
             tooltip: '代码块',
             color: colorScheme.primary,
-            onTap: () => _wrapSelection('\n```\n', '\n```\n'),
+            onTap: () => _wrapSelection('\n```dart\n', '\n```\n'),
           ),
         ],
       ),
@@ -520,7 +524,6 @@ class _MarkdownToolbar extends StatelessWidget {
     final text = controller.text;
     final selection = controller.selection;
     if (selection.isValid) {
-      // 找到当前行的起始位置
       int lineStart = selection.start;
       while (lineStart > 0 && text[lineStart - 1] != '\n') {
         lineStart--;
@@ -531,6 +534,76 @@ class _MarkdownToolbar extends StatelessWidget {
         offset: selection.start + prefix.length,
       );
     }
+  }
+
+  /// 在光标位置插入文本
+  void _insertAtCursor(String text) {
+    final currentText = controller.text;
+    final selection = controller.selection;
+    if (selection.isValid) {
+      final newText = currentText.replaceRange(
+        selection.start,
+        selection.end,
+        text,
+      );
+      controller.text = newText;
+      controller.selection = TextSelection.collapsed(
+        offset: selection.start + text.length,
+      );
+    }
+  }
+
+  /// 图片插入对话框
+  void _showImageDialog(BuildContext context) {
+    final urlController = TextEditingController();
+    final altController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('插入图片'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: urlController,
+              decoration: const InputDecoration(
+                labelText: '图片 URL',
+                hintText: 'https://example.com/image.png',
+                prefixIcon: Icon(Icons.link, size: 20),
+              ),
+              autofocus: true,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: altController,
+              decoration: const InputDecoration(
+                labelText: '替代文本',
+                hintText: '图片描述（可选）',
+                prefixIcon: Icon(Icons.text_fields, size: 20),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final url = urlController.text.trim();
+              final alt = altController.text.trim();
+              if (url.isNotEmpty) {
+                _insertAtCursor('![$alt]($url)');
+              }
+              Navigator.pop(dialogContext);
+            },
+            child: const Text('插入'),
+          ),
+        ],
+      ),
+    );
   }
 }
 

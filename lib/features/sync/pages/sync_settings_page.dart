@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../../services/sync_service.dart';
@@ -228,8 +229,7 @@ class _SyncSettingsPageState extends ConsumerState<SyncSettingsPage> {
           const SizedBox(height: 16),
           FilledButton.icon(
             onPressed: () async {
-              final result = await Navigator.pushNamed(
-                context,
+              final result = await context.push<bool>(
                 AppRouter.githubLogin,
               );
               if (result == true && mounted) {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
@@ -75,7 +76,7 @@ class SettingsPage extends ConsumerWidget {
             title: const Text('GitHub 同步'),
             subtitle: const Text('将笔记同步到 GitHub 仓库'),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.pushNamed(context, AppRouter.syncSettings),
+            onTap: () => context.push(AppRouter.syncSettings),
           ),
           ListTile(
             leading: Icon(
@@ -98,7 +99,7 @@ class SettingsPage extends ConsumerWidget {
             title: const Text('回收站'),
             subtitle: const Text('查看和恢复已删除的笔记'),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.pushNamed(context, AppRouter.trash),
+            onTap: () => context.push(AppRouter.trash),
           ),
           ListTile(
             leading: const Icon(Icons.file_download_outlined),

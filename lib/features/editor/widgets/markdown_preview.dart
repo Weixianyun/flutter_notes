@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_highlight/flutter_highlight.dart';
+import 'package:flutter_highlight/themes/github.dart';
+import 'package:flutter_highlight/themes/atom-one-dark.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:markdown/markdown.dart' as md;
 
 /// Markdown 预览组件
 ///
 /// 使用 flutter_markdown 渲染 Markdown 内容，
-/// 支持 GitHub Flavored Markdown：表格、任务列表、删除线、代码块语言标签。
+/// 支持 GitHub Flavored Markdown：表格、任务列表、删除线、代码块语法高亮。
 /// 自动适配当前主题的明暗模式。
 class MarkdownPreview extends StatelessWidget {
   const MarkdownPreview({
@@ -54,7 +57,7 @@ class MarkdownPreview extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: colorScheme.outlineVariant),
       ),
-      codeblockPadding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      codeblockPadding: const EdgeInsets.fromLTRB(0, 8, 0, 0),
       blockquoteDecoration: BoxDecoration(
         border: Border(
           left: BorderSide(
@@ -99,6 +102,7 @@ class MarkdownPreview extends StatelessWidget {
         codeBg: codeBg,
         codeFg: codeFg,
         labelColor: isDark ? const Color(0xFF6C7086) : const Color(0xFF6E7781),
+        isDark: isDark,
         borderRadius: BorderRadius.circular(12),
       ),
     };
@@ -149,18 +153,20 @@ class MarkdownPreview extends StatelessWidget {
 
 /// 代码块构建器
 ///
-/// 为 `<pre>` 元素构建自定义渲染，显示语言标签和带样式的代码内容。
+/// 为 `<pre>` 元素构建自定义渲染，支持语法高亮和语言标签。
 class CodeBlockBuilder extends MarkdownElementBuilder {
   CodeBlockBuilder({
     required this.codeBg,
     required this.codeFg,
     required this.labelColor,
+    required this.isDark,
     required this.borderRadius,
   });
 
   final Color codeBg;
   final Color codeFg;
   final Color labelColor;
+  final bool isDark;
   final BorderRadius borderRadius;
 
   @override
@@ -186,6 +192,7 @@ class CodeBlockBuilder extends MarkdownElementBuilder {
       codeBg: codeBg,
       codeFg: codeFg,
       labelColor: labelColor,
+      isDark: isDark,
       borderRadius: borderRadius,
     );
   }
@@ -198,6 +205,7 @@ class _CodeBlockWidget extends StatelessWidget {
     required this.codeBg,
     required this.codeFg,
     required this.labelColor,
+    required this.isDark,
     required this.borderRadius,
   });
 
@@ -206,15 +214,19 @@ class _CodeBlockWidget extends StatelessWidget {
   final Color codeBg;
   final Color codeFg;
   final Color labelColor;
+  final bool isDark;
   final BorderRadius borderRadius;
 
   @override
   Widget build(BuildContext context) {
+    final highlightTheme = isDark ? atomOneDarkTheme : githubTheme;
+
     return Container(
       decoration: BoxDecoration(
         color: codeBg,
         borderRadius: borderRadius,
       ),
+      clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -237,16 +249,15 @@ class _CodeBlockWidget extends StatelessWidget {
                 ],
               ),
             ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: SelectableText(
-              code,
-              style: TextStyle(
-                fontFamily: 'monospace',
-                fontSize: 13,
-                height: 1.5,
-                color: codeFg,
-              ),
+          HighlightView(
+            code,
+            language: language ?? 'plaintext',
+            theme: highlightTheme,
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+            textStyle: const TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 13,
+              height: 1.5,
             ),
           ),
         ],
