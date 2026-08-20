@@ -1230,3 +1230,149 @@ e8290ea feat: Week 3 Day 2 - batch operations, graph search, and 9 new widget te
 - 笔记标签管理增强（标签 CRUD、颜色标记）
 - 笔记排序选项（按标题/创建时间/优先级）
 - 应用国际化（i18n）基础框架
+
+## 2026-08-20 | Week 3 Day 3 — 标签管理 + 排序选项 + 国际化基础
+
+### 今日完成
+
+#### 1. 笔记标签管理增强
+
+##### 标签元数据服务（已存在）
+- services/tag_metadata_service.dart：TagMetadataService 提供 8 种预设颜色和 SharedPreferences 持久化
+- 颜色按标签名存储为 	agName|ARGB 格式
+
+##### 标签管理 Notifier (lib/features/notes/providers/tags_provider.dart)
+- 新增 TagsManagerNotifier 提供 4 个核心方法：
+  - createTag(name, color?)：创建标签（仅注册颜色配置）
+  - deleteTag(name)：从所有笔记中移除该标签并清除颜色，返回受影响笔记数
+  - enameTag(oldName, newName)：批量重命名 + 转移颜色配置，验证名称合法性
+  - setColor(name, color) / esetColor(name)：颜色调整
+- TagInfo 类扩展 color 字段，从 	agMetadataServiceProvider 注入
+- llTagsProvider 同步注入颜色元数据
+
+##### 标签管理页面 (lib/features/notes/pages/tag_management_page.dart)
+- 列表展示所有标签（带头像颜色、笔记数量）
+- PopupMenu 提供「重命名 / 更改颜色 / 重置颜色 / 删除」4 个操作
+- _showCreateDialog：新建标签（名称 + 8 色选择器）
+- _showRenameDialog：重命名（验证非空、不重复）
+- _showColorPicker：调整颜色
+- _showDeleteDialog：确认删除并显示受影响笔记数
+- 完整的 SnackBar 反馈
+
+##### UI 集成
+- 	ag_filter_bar.dart：标签前显示彩色圆点 avatar
+- 
+ote_card.dart：标签 chip 背景使用 Color.lerp(color, surface, 0.18) 混合，文字加深
+- pp_router.dart：新增 	agManagement = '/tags' 路由
+- settings_page.dart：数据管理分区新增「标签管理」入口
+
+#### 2. 笔记排序选项
+
+##### 排序 Provider (lib/features/notes/providers/sort_provider.dart)
+- 枚举 NoteSortOrder 5 种排序：
+  - updatedAtDesc：最近修改（默认）
+  - createdAtDesc：最新创建
+  - createdAtAsc：最早创建
+  - 	itleAsc：标题 A→Z
+  - priorityDesc：优先级高→低
+- NoteSortOrderNotifier：状态管理，默认 updatedAtDesc
+- sortedNotesProvider：组合 ilteredNotesProvider + 当前排序方式，链式应用
+
+##### UI 集成 (lib/features/notes/pages/notes_list_page.dart)
+- AppBar 新增排序按钮（Icons.sort）
+- PopupMenuButton 显示 5 种排序方式，当前选项带 ✓ 标记
+- 列表替换为 ef.watch(sortedNotesProvider)
+
+#### 3. 应用国际化（i18n）基础框架
+
+##### 依赖与配置
+- pubspec.yaml：添加 lutter_localizations 依赖
+- intl：从 0.18.1 升级到 0.20.2（flutter_localizations 要求）
+- pubspec.yaml flutter: 添加 generate: true 启用代码生成
+- 新增 l10n.yaml 配置（rb-dir, 	emplate-arb-file, output-class: AppLocalizations）
+
+##### ARB 翻译文件
+- lib/l10n/app_en.arb：英文模板（40+ 键）
+- lib/l10n/app_zh.arb：中文翻译
+- 关键字符串：appTitle, settingsTitle, tagManagement, sortUpdatedAtDesc 等
+- 占位符示例：	agDeleteConfirm 接受 
+ame + count 两个参数
+
+##### 生成的代码
+- lutter pub get 触发 gen-l10n 自动生成：
+  - pp_localizations.dart（委托）
+  - pp_localizations_en.dart
+  - pp_localizations_zh.dart
+- 所有页面可通过 AppLocalizations.of(context).xxx 获取翻译
+
+##### Locale Provider 与持久化
+- settings_provider.dart 新增 ppLocaleProvider 和 AppLocaleNotifier
+- supportedLocales：[Locale('en'), Locale('zh')]
+- PreferencesService：新增 getLocaleCode() / setLocaleCode(String?)
+- pp.dart：使用 onGenerateTitle + locale + localizationsDelegates
+
+#### 4. 测试增强
+
+##### 新增 17 项测试（共 124 项）
+- **标签元数据服务测试（5 项）**：	est/services/tag_metadata_service_test.dart
+  - 默认颜色、未设置时返回紫色
+  - set/remove/get 颜色持久化
+  - getAllTagColors 映射
+  - 损坏数据优雅降级
+- **排序 Provider 测试（10 项）**：	est/providers/sort_provider_test.dart
+  - NoteSortOrder 中文标签完整性
+  - Notifier 默认值与 setOrder
+  - 4 种排序行为（updatedAtDesc / titleAsc 大小写不敏感 / priorityDesc / createdAtAsc）
+- **Widget 测试（4 项）**：	est/widget_test.dart
+  - 排序菜单显示 5 种选项
+  - 选择「标题 A→Z」后菜单关闭
+  - 设置 → 标签管理入口（使用大屏幕 1080x2400）
+  - 标签管理页显示已存在标签
+
+### 验证结果
+- lutter analyze: No issues found (0 errors, 0 warnings)
+- lutter test: All tests passed! (124 tests, 新增 17 项)
+
+### 遇到的问题及解决
+
+#### 问题 1: Edit 工具返回成功但文件未变更
+- **现象**：连续多次使用 Edit 修改同一文件时，第一次返回成功但文件未变
+- **原因**：可能为本地文件系统的状态同步延迟
+- **解决**：当 Edit 无效时改用 Write 完整重写文件，确保变更生效
+
+#### 问题 2: intl 0.18.1 与 flutter_localizations 不兼容
+- **现象**：lutter pub get 报 intl 0.20.2 is required
+- **原因**：lutter_localizations 强制 pin intl 到 0.20.2
+- **解决**：升级 intl: ^0.18.1 → intl: ^0.20.2
+
+#### 问题 3: 标签管理测试中 ListTile 找不到
+- **现象**：ind.widgetWithText(ListTile, '标签管理') 报 0 widgets
+- **原因**：默认测试屏幕 800x600 太矮，设置页 ListTile 多，超出可视区域
+- **解决**：测试开头 	ester.view.physicalSize = Size(1080, 2400) 扩大屏幕
+
+#### 问题 4: PowerShell 中 flutter.bat 找不到 git
+- **现象**：lutter.bat 调用全大写 WHERE 命令时失败
+- **原因**：PowerShell 默认 PATH 不含 C:\Windows\System32 和 git 路径
+- **解决**：在每个 shell 调用前显式设置 $env:Path 包含 C:\Windows\System32 + git 路径
+
+### 技术决策
+- **TagInfo 颜色注入方式**：llTagsProvider 内部直接调用 	agMetadataServiceProvider.getTagColor()，避免每个消费者都读取服务，提高复用性
+- **删除标签策略**：直接修改所有引用笔记的 	ags 列表（不可撤销），借助回收站机制提供最终保险
+- **重命名冲突检查**：enameTag 拒绝同名（避免覆盖），拒绝空名
+- **颜色混合策略**：Color.lerp(color, surface, 0.18) 让标签 chip 在浅/深主题下都有可读背景
+- **排序 Provider 链式设计**：sortedNotesProvider watch ilteredNotesProvider + 
+oteSortOrderProvider，自动响应两者变化，无需手动刷新
+- **国际化默认值**：locale 为 null 时跟随系统，由 MaterialApp 自动解析
+- **ARB 占位符**：使用 ICU 格式 {name} + 占位符定义，比手写 String.format 更易维护
+- **flutter_localizations 升级策略**：跟随 Flutter SDK 主版本，新版本会强制 pin intl
+
+### Git 提交记录
+`
+<待提交>
+`
+
+### 明日计划 (Week 3 Day 4)
+- 标签页面 i18n 改造
+- 笔记列表 i18n 改造
+- 完整测试覆盖（包括 i18n 切换测试）
+- 性能监控（启动时间、滚动帧率）

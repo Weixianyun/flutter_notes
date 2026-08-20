@@ -18,6 +18,7 @@ class PreferencesService {
   static const _encryptedTokenKey = 'github_encrypted_token';
   static const _syncRepoOwnerKey = 'sync_repo_owner';
   static const _syncRepoNameKey = 'sync_repo_name';
+  static const _localeCodeKey = 'locale_code';
 
   // ── 主题模式 ──
 
@@ -110,5 +111,19 @@ class PreferencesService {
   Future<void> clearSyncConfig() async {
     await _prefs.remove(_syncRepoOwnerKey);
     await _prefs.remove(_syncRepoNameKey);
+  }
+
+  // ── 语言设置 ──
+
+  /// 获取应用语言代码（null 表示跟随系统）
+  String? getLocaleCode() => _prefs.getString(_localeCodeKey);
+
+  /// 设置应用语言代码（传 null 表示跟随系统）
+  Future<void> setLocaleCode(String? code) async {
+    if (code == null) {
+      await _prefs.remove(_localeCodeKey);
+    } else {
+      await _prefs.setString(_localeCodeKey, code);
+    }
   }
 }

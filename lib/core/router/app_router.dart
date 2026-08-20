@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/editor/pages/note_editor_page.dart';
 import '../../features/graph/pages/graph_page.dart';
 import '../../features/notes/pages/notes_list_page.dart';
+import '../../features/notes/pages/tag_management_page.dart';
 import '../../features/notes/pages/trash_page.dart';
 import '../../features/search/pages/search_page.dart';
 import '../../features/settings/pages/settings_page.dart';
@@ -26,6 +27,7 @@ class AppRouter {
   static const String githubLogin = '/github-login';
   static const String syncSettings = '/sync-settings';
   static const String trash = '/trash';
+  static const String tagManagement = '/tags';
 
   /// 构建 GoRouter 配置
   static GoRouter get router => _router;
@@ -71,6 +73,10 @@ class AppRouter {
           GoRoute(
             path: trash,
             builder: (context, state) => const TrashPage(),
+          ),
+          GoRoute(
+            path: tagManagement,
+            builder: (context, state) => const TagsManagementPage(),
           ),
         ],
         errorBuilder: (context, state) => Scaffold(

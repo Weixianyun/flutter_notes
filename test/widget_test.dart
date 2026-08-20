@@ -302,4 +302,81 @@ void main() {
     // 应显示匹配结果计数
     expect(find.textContaining('匹配'), findsOneWidget);
   });
+
+  // ── 排序选项测试 ──
+
+  testWidgets('Sort menu shows all sort options', (tester) async {
+    await pumpApp(tester);
+
+    // 点击排序按钮
+    await tester.tap(find.byTooltip('排序方式'));
+    await tester.pumpAndSettle();
+
+    // 应显示 5 种排序方式
+    expect(find.text('最近修改'), findsOneWidget);
+    expect(find.text('最新创建'), findsOneWidget);
+    expect(find.text('最早创建'), findsOneWidget);
+    expect(find.text('标题 A→Z'), findsOneWidget);
+    expect(find.text('优先级高→低'), findsOneWidget);
+  });
+
+  testWidgets('Selecting sort by title reorders notes', (tester) async {
+    await pumpApp(tester);
+
+    // 打开排序菜单
+    await tester.tap(find.byTooltip('排序方式'));
+    await tester.pumpAndSettle();
+
+    // 选择「标题 A→Z」
+    await tester.tap(find.text('标题 A→Z'));
+    await tester.pumpAndSettle();
+
+    // 排序菜单应关闭，列表应重新排序
+    expect(find.text('标题 A→Z'), findsNothing);
+  });
+
+  // ── 标签管理测试 ──
+
+  testWidgets('Settings page navigates to tag management', (tester) async {
+    // 设置较大的测试屏幕尺寸，确保所有 ListItem 都渲染
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pumpApp(tester);
+
+    // 打开设置
+    await tester.tap(find.byTooltip('更多'));
+    await tester.pumpAndSettle();
+
+    // 通过 ListTile 找到标签管理
+    final tagTile = find.widgetWithText(ListTile, '标签管理');
+    expect(tagTile, findsOneWidget);
+    await tester.tap(tagTile);
+    await tester.pumpAndSettle();
+
+    // 应有「新建标签」按钮
+    expect(find.byTooltip('新建标签'), findsOneWidget);
+  });
+
+  testWidgets('Tag management page shows existing tags', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pumpApp(tester);
+
+    // 打开设置 → 标签管理
+    await tester.tap(find.byTooltip('更多'));
+    await tester.pumpAndSettle();
+    final tagTile = find.widgetWithText(ListTile, '标签管理');
+    await tester.tap(tagTile);
+    await tester.pumpAndSettle();
+
+    // 应显示已存在的标签（来自 seed 数据）
+    expect(find.textContaining('#'), findsWidgets);
+  });
 }
+

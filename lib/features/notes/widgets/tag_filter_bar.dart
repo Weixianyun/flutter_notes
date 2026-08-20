@@ -7,6 +7,7 @@ import '../providers/tags_provider.dart';
 ///
 /// 水平滚动的标签芯片列表，支持多选过滤。
 /// 点击「全部」清除所有选中标签。
+/// 标签使用 `TagInfo.color` 染色，提升视觉识别。
 class TagFilterBar extends ConsumerWidget {
   const TagFilterBar({super.key});
 
@@ -47,6 +48,14 @@ class TagFilterBar extends ConsumerWidget {
                   padding:
                       const EdgeInsets.only(right: 6, top: 6, bottom: 6),
                   child: FilterChip(
+                    avatar: Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: tag.color,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
                     label: Text(
                       '${tag.name} (${tag.count})',
                       style: TextStyle(

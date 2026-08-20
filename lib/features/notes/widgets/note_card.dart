@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../data/models/note_model.dart';
+import '../../../services/service_providers.dart';
 
 /// 笔记卡片组件
 ///
 /// 在列表中展示单条笔记的标题、摘要、标签和更新时间。
 /// 支持点击进入编辑、长按进入多选模式。
 /// 多选模式下显示复选框和选中高亮。
-class NoteCard extends StatelessWidget {
+/// 标签 chip 根据 `TagMetadataService` 配置染色。
+class NoteCard extends ConsumerWidget {
   const NoteCard({
     super.key,
     required this.note,
@@ -26,10 +29,11 @@ class NoteCard extends StatelessWidget {
   final bool showCheckbox;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final dateFormat = DateFormat('MM/dd HH:mm');
+    final tagMetadata = ref.watch(tagMetadataServiceProvider);
 
     return Card(
       color: isSelected ? colorScheme.primaryContainer : null,
@@ -107,7 +111,10 @@ class NoteCard extends StatelessWidget {
                         ),
                         const Spacer(),
                         if (note.tags.isNotEmpty)
-                          _TagChips(tags: note.tags.take(3).toList()),
+                          _TagChips(
+                            tags: note.tags.take(3).toList(),
+                            colorResolver: tagMetadata.getTagColor,
+                          ),
                       ],
                     ),
                   ],
@@ -153,27 +160,33 @@ class _PriorityDot extends StatelessWidget {
 
 /// 标签芯片组
 class _TagChips extends StatelessWidget {
-  const _TagChips({required this.tags});
+  const _TagChips({required this.tags, required this.colorResolver});
 
   final List<String> tags;
+  final Color Function(String) colorResolver;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final luminance = Theme.of(context).brightness == Brightness.dark
+        ? 0.25
+        : 0.18;
 
     return Wrap(
       spacing: 4,
       children: tags.map((tag) {
+        final color = colorResolver(tag);
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           decoration: BoxDecoration(
-            color: colorScheme.secondaryContainer,
+            color: Color.lerp(color, colorScheme.surface, luminance),
             borderRadius: BorderRadius.circular(6),
           ),
           child: Text(
             '#$tag',
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: colorScheme.onSecondaryContainer,
+                  color: colorScheme.onSurface,
+                  fontWeight: FontWeight.w500,
                 ),
           ),
         );

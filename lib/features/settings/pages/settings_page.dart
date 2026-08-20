@@ -95,6 +95,13 @@ class SettingsPage extends ConsumerWidget {
           // ── 数据管理 ──
           const _SectionHeader(title: '数据管理'),
           ListTile(
+            leading: const Icon(Icons.label_outline),
+            title: const Text('标签管理'),
+            subtitle: const Text('创建、重命名、删除和调整标签颜色'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(AppRouter.tagManagement),
+          ),
+          ListTile(
             leading: const Icon(Icons.delete_outline),
             title: const Text('回收站'),
             subtitle: const Text('查看和恢复已删除的笔记'),

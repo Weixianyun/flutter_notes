@@ -7,6 +7,7 @@ import '../../../data/models/note_model.dart';
 import '../../../services/service_providers.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../providers/notes_provider.dart';
+import '../providers/sort_provider.dart';
 import '../providers/tags_provider.dart';
 import '../widgets/note_card.dart';
 import '../widgets/tag_filter_bar.dart';
@@ -169,9 +170,10 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
 
   @override
   Widget build(BuildContext context) {
-    final notesAsync = ref.watch(filteredNotesProvider);
+    final notesAsync = ref.watch(sortedNotesProvider);
     final allNotesAsync = ref.watch(notesProvider);
     final tagsAsync = ref.watch(allTagsProvider);
+    final sortOrder = ref.watch(noteSortOrderProvider);
 
     final hasTags = tagsAsync.maybeWhen(
       data: (tags) => tags.isNotEmpty,
@@ -228,6 +230,35 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
               icon: const Icon(Icons.search),
               tooltip: '搜索笔记',
               onPressed: () => context.push(AppRouter.search),
+            ),
+            PopupMenuButton<NoteSortOrder>(
+              icon: const Icon(Icons.sort),
+              tooltip: '排序方式',
+              initialValue: sortOrder,
+              onSelected: (order) =>
+                  ref.read(noteSortOrderProvider.notifier).setOrder(order),
+              itemBuilder: (context) => NoteSortOrder.values
+                  .map(
+                    (o) => PopupMenuItem<NoteSortOrder>(
+                      value: o,
+                      child: Row(
+                        children: [
+                          Icon(
+                            o == sortOrder
+                                ? Icons.check
+                                : Icons.radio_button_unchecked,
+                            size: 18,
+                            color: o == sortOrder
+                                ? Theme.of(context).colorScheme.primary
+                                : Theme.of(context).colorScheme.outline,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(o.label),
+                        ],
+                      ),
+                    ),
+                  )
+                  .toList(),
             ),
             IconButton(
               icon: const Icon(Icons.more_vert),

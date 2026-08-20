@@ -6,6 +6,7 @@ import 'export_service.dart';
 import 'github_service.dart';
 import 'preferences_service.dart';
 import 'sync_service.dart';
+import 'tag_metadata_service.dart';
 
 /// SharedPreferences 实例 Provider
 ///
@@ -17,6 +18,11 @@ final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
 /// 偏好设置服务 Provider
 final preferencesServiceProvider = Provider<PreferencesService>((ref) {
   return PreferencesService(ref.watch(sharedPreferencesProvider));
+});
+
+/// 标签元数据服务 Provider
+final tagMetadataServiceProvider = Provider<TagMetadataService>((ref) {
+  return TagMetadataService(ref.watch(sharedPreferencesProvider));
 });
 
 /// 加密服务 Provider

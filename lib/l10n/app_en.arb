@@ -1,0 +1,95 @@
+{
+  "@@locale": "en",
+  "appTitle": "Flutter Notes",
+  "settingsTitle": "Settings",
+  "appearanceSection": "Appearance",
+  "themeModeLabel": "Theme mode",
+  "themeModeLight": "Light",
+  "themeModeDark": "Dark",
+  "themeModeSystem": "System",
+  "seedColorLabel": "Seed color",
+  "syncSection": "Cloud sync",
+  "githubSync": "GitHub Sync",
+  "githubSyncSubtitle": "Sync notes to a GitHub repository",
+  "encryptionSettings": "Encryption",
+  "encryptionEnabled": "AES-256 encryption enabled",
+  "encryptionDisabled": "Encryption not enabled",
+  "dataManagementSection": "Data management",
+  "tagManagement": "Tag management",
+  "tagManagementSubtitle": "Create, rename, delete and recolor tags",
+  "recycleBin": "Recycle bin",
+  "recycleBinSubtitle": "View and restore deleted notes",
+  "exportNotes": "Export notes",
+  "exportNotesSubtitle": "Export as Markdown files",
+  "importNotes": "Import notes",
+  "importNotesSubtitle": "Import from Markdown files",
+  "clearAllNotes": "Clear all notes",
+  "aboutSection": "About",
+  "version": "Version",
+  "githubRepo": "GitHub repository",
+  "openSourceLicenses": "Open source licenses",
+  "languageSection": "Language",
+  "languageLabel": "Language",
+  "languageEnglish": "English",
+  "languageChinese": "中文",
+  "languageFollowSystem": "Follow system",
+  "tagCreateButton": "New tag",
+  "tagCreateDialogTitle": "Create tag",
+  "tagNameLabel": "Tag name",
+  "tagNameHint": "e.g. flutter",
+  "tagColorLabel": "Choose a color",
+  "tagActionCreate": "Create",
+  "tagActionRename": "Rename",
+  "tagActionChangeColor": "Change color",
+  "tagActionResetColor": "Reset color",
+  "tagActionDelete": "Delete",
+  "tagRenameDialogTitle": "Rename tag",
+  "tagDeleteDialogTitle": "Delete tag?",
+  "tagDeleteConfirm": "Will remove the tag \"{name}\" from {count} notes. This action cannot be undone.",
+  "@tagDeleteConfirm": {
+    "placeholders": {
+      "name": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  },
+  "tagCreateSuccess": "Tag \"{name}\" created",
+  "@tagCreateSuccess": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "tagRenameSuccess": "Renamed, affects {count} notes",
+  "@tagRenameSuccess": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "tagDeleteSuccess": "Tag deleted, affects {count} notes",
+  "@tagDeleteSuccess": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "tagColorUpdated": "Color updated",
+  "tagColorReset": "Color reset",
+  "tagCount": "{count, plural, =0{No notes} =1{1 note} other{{count} notes}}",
+  "@tagCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "sortUpdatedAtDesc": "Recently updated",
+  "sortCreatedAtDesc": "Newest created",
+  "sortCreatedAtAsc": "Oldest created",
+  "sortTitleAsc": "Title A→Z",
+  "sortPriorityDesc": "Priority high→low",
+  "emptyNotesTitle": "No notes yet",
+  "emptyNotesSubtitle": "Tap the button below to create your first note",
+  "emptyNotesAction": "New note",
+  "noFilteredNotesTitle": "No matching notes",
+  "noFilteredNotesSubtitle": "No notes match the current tag filter",
+  "noFilteredNotesAction": "Clear filter",
+  "loadErrorTitle": "Loading failed",
+  "loadErrorAction": "Retry",
+  "allTagsChip": "All"
+}

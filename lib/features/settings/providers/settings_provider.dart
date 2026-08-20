@@ -60,3 +60,34 @@ const String appVersion = '0.1.0';
 
 /// GitHub 仓库地址
 const String githubRepoUrl = 'https://github.com/Weixianyun/flutter_notes';
+
+/// 支持的本地化列表
+const supportedLocales = <Locale>[
+  Locale('en'),
+  Locale('zh'),
+];
+
+/// 应用语言状态管理
+///
+/// null 表示跟随系统设置，否则为显式选择的语言代码。
+class AppLocaleNotifier extends Notifier<Locale?> {
+  @override
+  Locale? build() {
+    final prefs = ref.read(preferencesServiceProvider);
+    final code = prefs.getLocaleCode();
+    if (code == null) return null;
+    return Locale(code);
+  }
+
+  /// 设置应用语言（null = 跟随系统）
+  Future<void> setLocale(Locale? locale) async {
+    final prefs = ref.read(preferencesServiceProvider);
+    await prefs.setLocaleCode(locale?.languageCode);
+    state = locale;
+  }
+}
+
+/// 应用语言 Provider
+final appLocaleProvider =
+    NotifierProvider<AppLocaleNotifier, Locale?>(AppLocaleNotifier.new);
+
