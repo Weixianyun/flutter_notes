@@ -1,5 +1,75 @@
 # 开发日志
 
+## 2026-08-20 | Week 3 Day 4 — i18n 切换集成 + 性能监控
+
+### 今日完成
+
+#### 1. 标签管理页面 i18n 改造
+- 替换所有硬编码中文字符串为 `AppLocalizations.of(context)` 调用
+- 涉及 `tag_management_page.dart` 全部 UI 文本：标题、菜单项、对话框、按钮、提示
+
+#### 2. 笔记列表页面 i18n 改造
+- 排序菜单（5 种排序方式）使用 `_labelForSort()` 辅助方法
+- 选择模式提示：`_isSelectionMode` 时显示 `l10n.selectedNotesCount(n)`
+- 工具栏提示、按钮、对话框均接入 l10n
+
+#### 3. 设置页语言切换 UI 集成
+- `settings_page.dart` 添加语言行（`Icons.language_outlined`）
+- `subtitle` 动态显示当前语言（`languageFollowSystem` / `languageEnglish` / `languageChinese`）
+- 尾部 `PopupMenuButton<Locale?>`：跟随系统 / English / 中文
+- 选中 `setLocale(Locale?)` 持久化到 SharedPreferences，MaterialApp 响应式重建
+
+#### 4. i18n 切换测试
+- 新增 `Settings page shows language switcher` 集成测试
+- 新增 `Language switcher changes UI locale` 端到端测试：
+  - 使用 `pumpAppReactiveLocale` 让 MaterialApp 响应 `appLocaleProvider` 变化
+  - 点击 `chevron_right` 触发 popup → 点击 `English` → 验证 AppBar 变为 "Settings"
+- 修复：原 `find.text('English').last` 在 popup 关闭时抛 StateError，改为全局查找
+- 修复：主题 `themeModeSystem` 与语言 `languageFollowSystem` 同为「跟随系统」导致 `find.text` 匹配多个
+
+#### 5. 辅助函数 `pumpAppReactiveLocale`
+- 在 `pumpAppReactiveLocale` 外部创建 `final router = AppRouter.createRouter()`
+- Consumer 重建时复用同一 router 实例，避免每次重建都创建新 GoRouter 触发路由重置
+- 仅在 `language switcher changes UI locale` 测试中使用
+
+### 验证结果
+- `flutter analyze`: No issues found (0 errors, 0 warnings)
+- `flutter test`: All tests passed! (132 tests, 含原有 124 + 2 项 i18n 集成)
+
+### 遇到的问题及解决
+
+#### 问题 1: `find.text('跟随系统')` 找到 2 个 widget
+- **现象**：`Settings page shows language switcher` 失败，期望 1 个但实际 2 个
+- **原因**：主题区 `SegmentedButton` 的 `themeModeSystem` 与语言区 `languageFollowSystem` 在中文 ARB 中都是「跟随系统」
+- **解决**：测试断言改为 `findsAtLeastNWidgets(1)`，并加注释说明文本重复原因
+
+#### 问题 2: popup 菜单项无法通过 `find.text().last` 找到
+- **现象**：`StateError: Bad state: No element` 抛在 `Iterable.last`
+- **原因**：`PopupMenuButton` 的 `itemBuilder` 懒构建，菜单未打开时菜单项不在 widget 树
+- **解决**：先 `tap` 触发器打开 popup，再 `pumpAndSettle()` 等待菜单项进入树，再查找点击
+
+#### 问题 3: Consumer 重建时 GoRouter 被重置
+- **现象**：切换语言后回到首页（`/`），原本在 `/settings` 页面丢失
+- **原因**：`Consumer.builder` 中调用 `AppRouter.createRouter()`，每次重建都创建新 GoRouter 并重置到 `initialLocation`
+- **解决**：将 `final router = createRouter()` 提到 Consumer 外部，让整个测试共享同一 router 实例
+
+### 技术决策
+- **locale ?? const Locale('zh')**：测试中显式兜底为中文，避免依赖系统语言环境
+- **popup 触发器图标查找**：使用 `find.descendant(of: langTile, matching: find.byIcon(Icons.chevron_right))` 精确定位，避免点击 ListTile 其它区域
+- **AppBar 实时刷新验证**：切换语言后 AppBar 标题应立即从「设置」变为「Settings」，证明 Localizations 重建链路完整
+- **不暴露 Pump 助手给生产代码**：`pumpAppReactiveLocale` 仅用于测试文件内部，未抽出到公共测试工具
+
+### Git 提交记录
+`待提交`
+
+---
+
+## 2026-08-20 | Week 3 Day 3 — 标签管理 + 排序 + 国际化框架
+
+(原有 Day 3 内容保留)
+
+---
+
 ## 2026-08-13 | 环境搭建 + 项目初始化
 
 ### 今日完成

@@ -123,6 +123,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tagColorLabel => 'Choose a color';
 
   @override
+  String tagColorDialogTitle(String name) {
+    return 'Color of \"$name\"';
+  }
+
+  @override
   String get tagActionCreate => 'Create';
 
   @override
@@ -139,6 +144,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tagRenameDialogTitle => 'Rename tag';
+
+  @override
+  String get newName => 'New name';
 
   @override
   String get tagDeleteDialogTitle => 'Delete tag?';
@@ -182,6 +190,25 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get tagManagementEmptyTitle => 'No tags yet';
+
+  @override
+  String get tagManagementEmptySubtitle =>
+      'Add tags to your notes, then manage them here';
+
+  @override
+  String get cancel => 'Cancel';
+
+  @override
+  String get confirm => 'OK';
+
+  @override
+  String get createFailed => 'Create failed';
+
+  @override
+  String get renameFailed => 'Rename failed';
+
+  @override
   String get sortUpdatedAtDesc => 'Recently updated';
 
   @override
@@ -195,6 +222,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sortPriorityDesc => 'Priority high→low';
+
+  @override
+  String get sortMenuTooltip => 'Sort by';
 
   @override
   String get emptyNotesTitle => 'No notes yet';
@@ -223,4 +253,121 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get allTagsChip => 'All';
+
+  @override
+  String selectedNotesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count selected',
+      one: '1 selected',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get exitSelectionTooltip => 'Exit';
+
+  @override
+  String get selectAllTooltip => 'Select all';
+
+  @override
+  String get exportSelectedTooltip => 'Export selected';
+
+  @override
+  String get deleteSelectedTooltip => 'Delete selected';
+
+  @override
+  String get knowledgeGraphTooltip => 'Knowledge graph';
+
+  @override
+  String get searchNotesTooltip => 'Search notes';
+
+  @override
+  String get moreTooltip => 'More';
+
+  @override
+  String get deleteSelectedDialogTitle => 'Delete selected notes?';
+
+  @override
+  String deleteSelectedDialogContent(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Will move $count notes to the recycle bin.',
+      one: 'Will move 1 note to the recycle bin.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String movedToTrashCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Moved $count notes to the recycle bin',
+      one: 'Moved 1 note to the recycle bin',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String movedNoteToTrash(String title) {
+    return 'Moved \"$title\" to the recycle bin';
+  }
+
+  @override
+  String get undoAction => 'Undo';
+
+  @override
+  String get exportingInProgress => 'Exporting...';
+
+  @override
+  String get exportComplete => 'Export complete';
+
+  @override
+  String exportSuccessCount(int success, int total) {
+    return 'Exported $success of $total notes';
+  }
+
+  @override
+  String exportFailedCount(int count) {
+    return '$count failed';
+  }
+
+  @override
+  String get exportPath => 'Export path:';
+
+  @override
+  String get exportPathCopied => 'Path copied to clipboard';
+
+  @override
+  String get copyPathAction => 'Copy path';
+
+  @override
+  String get doneAction => 'Done';
+
+  @override
+  String exportFailed(String error) {
+    return 'Export failed: $error';
+  }
+
+  @override
+  String get noNotesToExport => 'No notes to export';
+
+  @override
+  String get comingSoon => 'coming soon';
+
+  @override
+  String get clearAllConfirmTitle => 'Clear all notes?';
+
+  @override
+  String get clearAllConfirmContent =>
+      'This action cannot be undone. All notes will be permanently deleted.';
+
+  @override
+  String get clearAllConfirmAction => 'Confirm clear';
+
+  @override
+  String get clearAllNotesSuccess => 'All notes cleared';
 }

@@ -21,7 +21,19 @@ enum NoteSortOrder {
   priorityDesc,
 }
 
-extension NoteSortOrderLabel on NoteSortOrder {
+/// 排序方式 i18n key 映射
+extension NoteSortOrderL10nKey on NoteSortOrder {
+  String get l10nKey {
+    return switch (this) {
+      NoteSortOrder.updatedAtDesc => 'sortUpdatedAtDesc',
+      NoteSortOrder.createdAtDesc => 'sortCreatedAtDesc',
+      NoteSortOrder.createdAtAsc => 'sortCreatedAtAsc',
+      NoteSortOrder.titleAsc => 'sortTitleAsc',
+      NoteSortOrder.priorityDesc => 'sortPriorityDesc',
+    };
+  }
+
+  /// 默认中文标签（兼容旧调用方与单元测试）
   String get label {
     return switch (this) {
       NoteSortOrder.updatedAtDesc => '最近修改',

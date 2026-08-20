@@ -38,12 +38,19 @@
   "tagNameLabel": "Tag name",
   "tagNameHint": "e.g. flutter",
   "tagColorLabel": "Choose a color",
+  "tagColorDialogTitle": "Color of \"{name}\"",
+  "@tagColorDialogTitle": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
   "tagActionCreate": "Create",
   "tagActionRename": "Rename",
   "tagActionChangeColor": "Change color",
   "tagActionResetColor": "Reset color",
   "tagActionDelete": "Delete",
   "tagRenameDialogTitle": "Rename tag",
+  "newName": "New name",
   "tagDeleteDialogTitle": "Delete tag?",
   "tagDeleteConfirm": "Will remove the tag \"{name}\" from {count} notes. This action cannot be undone.",
   "@tagDeleteConfirm": {
@@ -78,11 +85,18 @@
       "count": { "type": "int" }
     }
   },
+  "tagManagementEmptyTitle": "No tags yet",
+  "tagManagementEmptySubtitle": "Add tags to your notes, then manage them here",
+  "cancel": "Cancel",
+  "confirm": "OK",
+  "createFailed": "Create failed",
+  "renameFailed": "Rename failed",
   "sortUpdatedAtDesc": "Recently updated",
   "sortCreatedAtDesc": "Newest created",
   "sortCreatedAtAsc": "Oldest created",
   "sortTitleAsc": "Title A→Z",
   "sortPriorityDesc": "Priority high→low",
+  "sortMenuTooltip": "Sort by",
   "emptyNotesTitle": "No notes yet",
   "emptyNotesSubtitle": "Tap the button below to create your first note",
   "emptyNotesAction": "New note",
@@ -91,5 +105,69 @@
   "noFilteredNotesAction": "Clear filter",
   "loadErrorTitle": "Loading failed",
   "loadErrorAction": "Retry",
-  "allTagsChip": "All"
+  "allTagsChip": "All",
+  "selectedNotesCount": "{count, plural, =1{1 selected} other{{count} selected}}",
+  "@selectedNotesCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "exitSelectionTooltip": "Exit",
+  "selectAllTooltip": "Select all",
+  "exportSelectedTooltip": "Export selected",
+  "deleteSelectedTooltip": "Delete selected",
+  "knowledgeGraphTooltip": "Knowledge graph",
+  "searchNotesTooltip": "Search notes",
+  "moreTooltip": "More",
+  "deleteSelectedDialogTitle": "Delete selected notes?",
+  "deleteSelectedDialogContent": "{count, plural, =1{Will move 1 note to the recycle bin.} other{Will move {count} notes to the recycle bin.}}",
+  "@deleteSelectedDialogContent": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "movedToTrashCount": "{count, plural, =1{Moved 1 note to the recycle bin} other{Moved {count} notes to the recycle bin}}",
+  "@movedToTrashCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "movedNoteToTrash": "Moved \"{title}\" to the recycle bin",
+  "@movedNoteToTrash": {
+    "placeholders": {
+      "title": { "type": "String" }
+    }
+  },
+  "undoAction": "Undo",
+  "exportingInProgress": "Exporting...",
+  "exportComplete": "Export complete",
+  "exportSuccessCount": "Exported {success} of {total} notes",
+  "@exportSuccessCount": {
+    "placeholders": {
+      "success": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "exportFailedCount": "{count} failed",
+  "@exportFailedCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "exportPath": "Export path:",
+  "exportPathCopied": "Path copied to clipboard",
+  "copyPathAction": "Copy path",
+  "doneAction": "Done",
+  "exportFailed": "Export failed: {error}",
+  "@exportFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "noNotesToExport": "No notes to export",
+  "comingSoon": "coming soon",
+  "clearAllConfirmTitle": "Clear all notes?",
+  "clearAllConfirmContent": "This action cannot be undone. All notes will be permanently deleted.",
+  "clearAllConfirmAction": "Confirm clear",
+  "clearAllNotesSuccess": "All notes cleared"
 }

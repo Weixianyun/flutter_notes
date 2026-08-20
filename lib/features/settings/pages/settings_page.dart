@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../notes/providers/notes_provider.dart';
 import '../providers/settings_provider.dart';
 import '../../../services/service_providers.dart';
@@ -18,35 +19,40 @@ class SettingsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final themeMode = ref.watch(themeModeProvider);
     final seedColor = ref.watch(seedColorProvider);
+    final locale = ref.watch(appLocaleProvider);
     final isEncrypted = ref.watch(encryptionStatusProvider);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('设置')),
+      appBar: AppBar(title: Text(l10n.settingsTitle)),
       body: ListView(
         children: [
           // ── 外观 ──
-          const _SectionHeader(title: '外观'),
+          _SectionHeader(title: l10n.appearanceSection),
           ListTile(
             leading: const Icon(Icons.palette_outlined),
-            title: const Text('主题模式'),
-            subtitle: Text(_themeModeLabel(themeMode)),
+            title: Text(l10n.themeModeLabel),
+            subtitle: Text(_themeModeLabel(themeMode, l10n)),
             trailing: SegmentedButton<ThemeMode>(
-              segments: const [
+              segments: [
                 ButtonSegment(
                   value: ThemeMode.light,
-                  icon: Icon(Icons.light_mode, size: 16),
+                  icon: const Icon(Icons.light_mode, size: 16),
+                  tooltip: l10n.themeModeLight,
                 ),
                 ButtonSegment(
                   value: ThemeMode.system,
-                  icon: Icon(Icons.settings_brightness, size: 16),
+                  icon: const Icon(Icons.settings_brightness, size: 16),
+                  tooltip: l10n.themeModeSystem,
                 ),
                 ButtonSegment(
                   value: ThemeMode.dark,
-                  icon: Icon(Icons.dark_mode, size: 16),
+                  icon: const Icon(Icons.dark_mode, size: 16),
+                  tooltip: l10n.themeModeDark,
                 ),
               ],
               selected: {themeMode},
@@ -59,7 +65,7 @@ class SettingsPage extends ConsumerWidget {
           ),
           ListTile(
             leading: const Icon(Icons.color_lens_outlined),
-            title: const Text('主题色'),
+            title: Text(l10n.seedColorLabel),
             subtitle: Text(_seedColorLabel(seedColor)),
             trailing: CircleAvatar(
               backgroundColor: seedColor,
@@ -67,14 +73,80 @@ class SettingsPage extends ConsumerWidget {
             ),
             onTap: () => _showSeedColorPicker(context, ref, seedColor),
           ),
+          ListTile(
+            leading: const Icon(Icons.language_outlined),
+            title: Text(l10n.languageLabel),
+            subtitle: Text(_localeLabel(locale, l10n)),
+            trailing: PopupMenuButton<Locale?>(
+              icon: const Icon(Icons.chevron_right),
+              tooltip: l10n.languageLabel,
+              initialValue: locale,
+              onSelected: (newLocale) =>
+                  ref.read(appLocaleProvider.notifier).setLocale(newLocale),
+              itemBuilder: (context) => [
+                PopupMenuItem<Locale?>(
+                  value: null,
+                  child: Row(
+                    children: [
+                      Icon(
+                        locale == null ? Icons.check : Icons.radio_button_unchecked,
+                        size: 18,
+                        color: locale == null
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context).colorScheme.outline,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(l10n.languageFollowSystem),
+                    ],
+                  ),
+                ),
+                PopupMenuItem<Locale?>(
+                  value: const Locale('en'),
+                  child: Row(
+                    children: [
+                      Icon(
+                        locale?.languageCode == 'en'
+                            ? Icons.check
+                            : Icons.radio_button_unchecked,
+                        size: 18,
+                        color: locale?.languageCode == 'en'
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context).colorScheme.outline,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(l10n.languageEnglish),
+                    ],
+                  ),
+                ),
+                PopupMenuItem<Locale?>(
+                  value: const Locale('zh'),
+                  child: Row(
+                    children: [
+                      Icon(
+                        locale?.languageCode == 'zh'
+                            ? Icons.check
+                            : Icons.radio_button_unchecked,
+                        size: 18,
+                        color: locale?.languageCode == 'zh'
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context).colorScheme.outline,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(l10n.languageChinese),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
           const Divider(height: 32),
 
           // ── 同步 ──
-          const _SectionHeader(title: '云同步'),
+          _SectionHeader(title: l10n.syncSection),
           ListTile(
             leading: const Icon(Icons.cloud_outlined),
-            title: const Text('GitHub 同步'),
-            subtitle: const Text('将笔记同步到 GitHub 仓库'),
+            title: Text(l10n.githubSync),
+            subtitle: Text(l10n.githubSyncSubtitle),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push(AppRouter.syncSettings),
           ),
@@ -83,44 +155,44 @@ class SettingsPage extends ConsumerWidget {
               isEncrypted ? Icons.lock : Icons.lock_open,
               color: isEncrypted ? colorScheme.primary : colorScheme.error,
             ),
-            title: const Text('加密设置'),
+            title: Text(l10n.encryptionSettings),
             subtitle: Text(
-              isEncrypted ? 'AES-256 加密已启用' : '加密未启用',
+              isEncrypted ? l10n.encryptionEnabled : l10n.encryptionDisabled,
             ),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => _showEncryptionInfo(context, isEncrypted),
+            onTap: () => _showEncryptionInfo(context, isEncrypted, l10n),
           ),
           const Divider(height: 32),
 
           // ── 数据管理 ──
-          const _SectionHeader(title: '数据管理'),
+          _SectionHeader(title: l10n.dataManagementSection),
           ListTile(
             leading: const Icon(Icons.label_outline),
-            title: const Text('标签管理'),
-            subtitle: const Text('创建、重命名、删除和调整标签颜色'),
+            title: Text(l10n.tagManagement),
+            subtitle: Text(l10n.tagManagementSubtitle),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push(AppRouter.tagManagement),
           ),
           ListTile(
             leading: const Icon(Icons.delete_outline),
-            title: const Text('回收站'),
-            subtitle: const Text('查看和恢复已删除的笔记'),
+            title: Text(l10n.recycleBin),
+            subtitle: Text(l10n.recycleBinSubtitle),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push(AppRouter.trash),
           ),
           ListTile(
             leading: const Icon(Icons.file_download_outlined),
-            title: const Text('导出笔记'),
-            subtitle: const Text('导出为 Markdown 文件'),
+            title: Text(l10n.exportNotes),
+            subtitle: Text(l10n.exportNotesSubtitle),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _exportNotes(context, ref),
           ),
           ListTile(
             leading: const Icon(Icons.file_upload_outlined),
-            title: const Text('导入笔记'),
-            subtitle: const Text('从 Markdown 文件导入'),
+            title: Text(l10n.importNotes),
+            subtitle: Text(l10n.importNotesSubtitle),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => _showComingSoon(context, '导入功能'),
+            onTap: () => _showComingSoon(context, l10n, l10n.importNotes),
           ),
           ListTile(
             leading: Icon(
@@ -128,19 +200,19 @@ class SettingsPage extends ConsumerWidget {
               color: colorScheme.error,
             ),
             title: Text(
-              '清空所有笔记',
+              l10n.clearAllNotes,
               style: TextStyle(color: colorScheme.error),
             ),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => _showClearConfirm(context, ref),
+            onTap: () => _showClearConfirm(context, ref, l10n),
           ),
           const Divider(height: 32),
 
           // ── 关于 ──
-          const _SectionHeader(title: '关于'),
+          _SectionHeader(title: l10n.aboutSection),
           ListTile(
             leading: const Icon(Icons.info_outline),
-            title: const Text('版本'),
+            title: Text(l10n.version),
             trailing: Text(
               appVersion,
               style: theme.textTheme.bodyMedium?.copyWith(
@@ -150,14 +222,14 @@ class SettingsPage extends ConsumerWidget {
           ),
           ListTile(
             leading: const Icon(Icons.code),
-            title: const Text('GitHub 仓库'),
+            title: Text(l10n.githubRepo),
             subtitle: const Text(githubRepoUrl),
             trailing: const Icon(Icons.open_in_new, size: 18),
             onTap: () => _showRepoInfo(context),
           ),
           ListTile(
             leading: const Icon(Icons.description_outlined),
-            title: const Text('开源许可'),
+            title: Text(l10n.openSourceLicenses),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _showLicenses(context),
           ),
@@ -167,11 +239,19 @@ class SettingsPage extends ConsumerWidget {
     );
   }
 
-  String _themeModeLabel(ThemeMode mode) {
+  String _themeModeLabel(ThemeMode mode, AppLocalizations l10n) {
     return switch (mode) {
-      ThemeMode.light => '浅色模式',
-      ThemeMode.dark => '深色模式',
-      ThemeMode.system => '跟随系统',
+      ThemeMode.light => l10n.themeModeLight,
+      ThemeMode.dark => l10n.themeModeDark,
+      ThemeMode.system => l10n.themeModeSystem,
+    };
+  }
+
+  String _localeLabel(Locale? locale, AppLocalizations l10n) {
+    return switch (locale?.languageCode) {
+      'en' => l10n.languageEnglish,
+      'zh' => l10n.languageChinese,
+      _ => l10n.languageFollowSystem,
     };
   }
 
@@ -257,49 +337,50 @@ class SettingsPage extends ConsumerWidget {
     );
   }
 
-  void _showEncryptionInfo(BuildContext context, bool isEncrypted) {
+  void _showEncryptionInfo(BuildContext context, bool isEncrypted, AppLocalizations l10n) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('加密设置'),
+        title: Text(l10n.encryptionSettings),
         content: Text(
           isEncrypted
-              ? 'AES-256 加密已启用。\n\n'
+              ? '${l10n.encryptionEnabled}。\n\n'
                   '本地敏感数据（如 GitHub OAuth Token）使用 '
                   'AES-256-CBC 模式加密存储，每次加密使用独立随机 IV。\n\n'
                   '密钥安全存储在设备本地。'
-              : '加密未启用。\n\n'
+              : '${l10n.encryptionDisabled}。\n\n'
                   '首次使用加密功能时将自动生成密钥。',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('知道了'),
+            child: Text(l10n.confirm),
           ),
         ],
       ),
     );
   }
 
-  void _showComingSoon(BuildContext context, String feature) {
+  void _showComingSoon(BuildContext context, AppLocalizations l10n, String feature) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$feature即将推出')),
+      SnackBar(content: Text('$feature ${l10n.comingSoon}')),
     );
   }
 
   Future<void> _exportNotes(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context);
     final notesAsync = ref.read(notesProvider);
     final notes = notesAsync.valueOrNull ?? [];
 
     if (notes.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('没有笔记可导出')),
+        SnackBar(content: Text(l10n.noNotesToExport)),
       );
       return;
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('正在导出...')),
+      SnackBar(content: Text(l10n.exportingInProgress)),
     );
 
     try {
@@ -311,21 +392,21 @@ class SettingsPage extends ConsumerWidget {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('导出完成'),
+          title: Text(l10n.exportComplete),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('成功导出 ${result.success}/${result.total} 篇笔记'),
+              Text(l10n.exportSuccessCount(result.success, result.total)),
               if (result.errors.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Text(
-                  '失败 ${result.failed} 篇',
+                  l10n.exportFailedCount(result.failed),
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
               ],
               const SizedBox(height: 12),
-              const Text('导出路径：'),
+              Text(l10n.exportPath),
               const SizedBox(height: 4),
               Container(
                 padding: const EdgeInsets.all(8),
@@ -346,14 +427,14 @@ class SettingsPage extends ConsumerWidget {
                 Clipboard.setData(
                     ClipboardData(text: result.directoryPath));
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('路径已复制到剪贴板')),
+                  SnackBar(content: Text(l10n.exportPathCopied)),
                 );
               },
-              child: const Text('复制路径'),
+              child: Text(l10n.copyPathAction),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('完成'),
+              child: Text(l10n.doneAction),
             ),
           ],
         ),
@@ -361,21 +442,21 @@ class SettingsPage extends ConsumerWidget {
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('导出失败: $e')),
+        SnackBar(content: Text(l10n.exportFailed(e.toString()))),
       );
     }
   }
 
-  void _showClearConfirm(BuildContext context, WidgetRef ref) {
+  void _showClearConfirm(BuildContext context, WidgetRef ref, AppLocalizations l10n) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('清空所有笔记？'),
-        content: const Text('此操作不可撤销，所有笔记将被永久删除。'),
+        title: Text(l10n.clearAllConfirmTitle),
+        content: Text(l10n.clearAllConfirmContent),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             onPressed: () async {
@@ -383,10 +464,10 @@ class SettingsPage extends ConsumerWidget {
               await ref.read(notesProvider.notifier).clearAllNotes();
               if (!context.mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('已清空所有笔记')),
+                SnackBar(content: Text(l10n.clearAllNotesSuccess)),
               );
             },
-            child: const Text('确认清空'),
+            child: Text(l10n.clearAllConfirmAction),
           ),
         ],
       ),

@@ -326,6 +326,12 @@ abstract class AppLocalizations {
   /// **'Choose a color'**
   String get tagColorLabel;
 
+  /// No description provided for @tagColorDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Color of \"{name}\"'**
+  String tagColorDialogTitle(String name);
+
   /// No description provided for @tagActionCreate.
   ///
   /// In en, this message translates to:
@@ -361,6 +367,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Rename tag'**
   String get tagRenameDialogTitle;
+
+  /// No description provided for @newName.
+  ///
+  /// In en, this message translates to:
+  /// **'New name'**
+  String get newName;
 
   /// No description provided for @tagDeleteDialogTitle.
   ///
@@ -410,6 +422,42 @@ abstract class AppLocalizations {
   /// **'{count, plural, =0{No notes} =1{1 note} other{{count} notes}}'**
   String tagCount(int count);
 
+  /// No description provided for @tagManagementEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No tags yet'**
+  String get tagManagementEmptyTitle;
+
+  /// No description provided for @tagManagementEmptySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add tags to your notes, then manage them here'**
+  String get tagManagementEmptySubtitle;
+
+  /// No description provided for @cancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get cancel;
+
+  /// No description provided for @confirm.
+  ///
+  /// In en, this message translates to:
+  /// **'OK'**
+  String get confirm;
+
+  /// No description provided for @createFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Create failed'**
+  String get createFailed;
+
+  /// No description provided for @renameFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename failed'**
+  String get renameFailed;
+
   /// No description provided for @sortUpdatedAtDesc.
   ///
   /// In en, this message translates to:
@@ -439,6 +487,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Priority high→low'**
   String get sortPriorityDesc;
+
+  /// No description provided for @sortMenuTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Sort by'**
+  String get sortMenuTooltip;
 
   /// No description provided for @emptyNotesTitle.
   ///
@@ -493,6 +547,174 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'All'**
   String get allTagsChip;
+
+  /// No description provided for @selectedNotesCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 selected} other{{count} selected}}'**
+  String selectedNotesCount(int count);
+
+  /// No description provided for @exitSelectionTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit'**
+  String get exitSelectionTooltip;
+
+  /// No description provided for @selectAllTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Select all'**
+  String get selectAllTooltip;
+
+  /// No description provided for @exportSelectedTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Export selected'**
+  String get exportSelectedTooltip;
+
+  /// No description provided for @deleteSelectedTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete selected'**
+  String get deleteSelectedTooltip;
+
+  /// No description provided for @knowledgeGraphTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Knowledge graph'**
+  String get knowledgeGraphTooltip;
+
+  /// No description provided for @searchNotesTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Search notes'**
+  String get searchNotesTooltip;
+
+  /// No description provided for @moreTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get moreTooltip;
+
+  /// No description provided for @deleteSelectedDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete selected notes?'**
+  String get deleteSelectedDialogTitle;
+
+  /// No description provided for @deleteSelectedDialogContent.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Will move 1 note to the recycle bin.} other{Will move {count} notes to the recycle bin.}}'**
+  String deleteSelectedDialogContent(int count);
+
+  /// No description provided for @movedToTrashCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Moved 1 note to the recycle bin} other{Moved {count} notes to the recycle bin}}'**
+  String movedToTrashCount(int count);
+
+  /// No description provided for @movedNoteToTrash.
+  ///
+  /// In en, this message translates to:
+  /// **'Moved \"{title}\" to the recycle bin'**
+  String movedNoteToTrash(String title);
+
+  /// No description provided for @undoAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get undoAction;
+
+  /// No description provided for @exportingInProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Exporting...'**
+  String get exportingInProgress;
+
+  /// No description provided for @exportComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Export complete'**
+  String get exportComplete;
+
+  /// No description provided for @exportSuccessCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Exported {success} of {total} notes'**
+  String exportSuccessCount(int success, int total);
+
+  /// No description provided for @exportFailedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} failed'**
+  String exportFailedCount(int count);
+
+  /// No description provided for @exportPath.
+  ///
+  /// In en, this message translates to:
+  /// **'Export path:'**
+  String get exportPath;
+
+  /// No description provided for @exportPathCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Path copied to clipboard'**
+  String get exportPathCopied;
+
+  /// No description provided for @copyPathAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy path'**
+  String get copyPathAction;
+
+  /// No description provided for @doneAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get doneAction;
+
+  /// No description provided for @exportFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Export failed: {error}'**
+  String exportFailed(String error);
+
+  /// No description provided for @noNotesToExport.
+  ///
+  /// In en, this message translates to:
+  /// **'No notes to export'**
+  String get noNotesToExport;
+
+  /// No description provided for @comingSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'coming soon'**
+  String get comingSoon;
+
+  /// No description provided for @clearAllConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear all notes?'**
+  String get clearAllConfirmTitle;
+
+  /// No description provided for @clearAllConfirmContent.
+  ///
+  /// In en, this message translates to:
+  /// **'This action cannot be undone. All notes will be permanently deleted.'**
+  String get clearAllConfirmContent;
+
+  /// No description provided for @clearAllConfirmAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm clear'**
+  String get clearAllConfirmAction;
+
+  /// No description provided for @clearAllNotesSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'All notes cleared'**
+  String get clearAllNotesSuccess;
 }
 
 class _AppLocalizationsDelegate

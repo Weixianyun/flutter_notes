@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../services/tag_metadata_service.dart';
 import '../providers/tags_provider.dart';
 
@@ -16,35 +17,39 @@ class TagsManagementPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final tagsAsync = ref.watch(allTagsProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('标签管理'),
+        title: Text(l10n.tagManagement),
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
-            tooltip: '新建标签',
+            tooltip: l10n.tagCreateButton,
             onPressed: () => _showCreateDialog(context, ref),
           ),
         ],
       ),
       body: tagsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(child: Text('加载失败: $error')),
+        error: (error, _) => Center(child: Text('${l10n.loadErrorTitle}: $error')),
         data: (tags) {
           if (tags.isEmpty) {
-            return const Center(
+            return Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.label_outline, size: 64, color: Colors.grey),
-                  SizedBox(height: 16),
-                  Text('还没有任何标签', style: TextStyle(color: Colors.grey)),
-                  SizedBox(height: 8),
+                  const Icon(Icons.label_outline, size: 64, color: Colors.grey),
+                  const SizedBox(height: 16),
                   Text(
-                    '在笔记中添加标签后，可在此管理',
-                    style: TextStyle(color: Colors.grey, fontSize: 12),
+                    l10n.tagManagementEmptyTitle,
+                    style: const TextStyle(color: Colors.grey),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    l10n.tagManagementEmptySubtitle,
+                    style: const TextStyle(color: Colors.grey, fontSize: 12),
                   ),
                 ],
               ),
@@ -63,7 +68,7 @@ class TagsManagementPage extends ConsumerWidget {
                   child: const Icon(Icons.label, color: Colors.white, size: 14),
                 ),
                 title: Text('#${tag.name}'),
-                subtitle: Text('${tag.count} 篇笔记'),
+                subtitle: Text(l10n.tagCount(tag.count)),
                 trailing: PopupMenuButton<String>(
                   onSelected: (value) {
                     switch (value) {
@@ -78,7 +83,7 @@ class TagsManagementPage extends ConsumerWidget {
                             .read(tagsManagerProvider.notifier)
                             .resetColor(tag.name);
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('已重置颜色')),
+                          SnackBar(content: Text(l10n.tagColorReset)),
                         );
                         break;
                       case 'delete':
@@ -86,14 +91,14 @@ class TagsManagementPage extends ConsumerWidget {
                         break;
                     }
                   },
-                  itemBuilder: (context) => const [
+                  itemBuilder: (context) => [
                     PopupMenuItem(
                       value: 'rename',
                       child: Row(
                         children: [
-                          Icon(Icons.edit_outlined),
-                          SizedBox(width: 8),
-                          Text('重命名'),
+                          const Icon(Icons.edit_outlined),
+                          const SizedBox(width: 8),
+                          Text(l10n.tagActionRename),
                         ],
                       ),
                     ),
@@ -101,9 +106,9 @@ class TagsManagementPage extends ConsumerWidget {
                       value: 'color',
                       child: Row(
                         children: [
-                          Icon(Icons.color_lens_outlined),
-                          SizedBox(width: 8),
-                          Text('更改颜色'),
+                          const Icon(Icons.color_lens_outlined),
+                          const SizedBox(width: 8),
+                          Text(l10n.tagActionChangeColor),
                         ],
                       ),
                     ),
@@ -111,20 +116,23 @@ class TagsManagementPage extends ConsumerWidget {
                       value: 'reset',
                       child: Row(
                         children: [
-                          Icon(Icons.refresh),
-                          SizedBox(width: 8),
-                          Text('重置颜色'),
+                          const Icon(Icons.refresh),
+                          const SizedBox(width: 8),
+                          Text(l10n.tagActionResetColor),
                         ],
                       ),
                     ),
-                    PopupMenuDivider(),
+                    const PopupMenuDivider(),
                     PopupMenuItem(
                       value: 'delete',
                       child: Row(
                         children: [
-                          Icon(Icons.delete_outline, color: Colors.red),
-                          SizedBox(width: 8),
-                          Text('删除', style: TextStyle(color: Colors.red)),
+                          const Icon(Icons.delete_outline, color: Colors.red),
+                          const SizedBox(width: 8),
+                          Text(
+                            l10n.tagActionDelete,
+                            style: const TextStyle(color: Colors.red),
+                          ),
                         ],
                       ),
                     ),
@@ -140,6 +148,7 @@ class TagsManagementPage extends ConsumerWidget {
   }
 
   Future<void> _showCreateDialog(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context);
     final nameController = TextEditingController();
     Color selectedColor = TagMetadataService.presetColors.first;
     final result = await showDialog<bool>(
@@ -148,7 +157,7 @@ class TagsManagementPage extends ConsumerWidget {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: const Text('新建标签'),
+              title: Text(l10n.tagCreateDialogTitle),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -156,14 +165,17 @@ class TagsManagementPage extends ConsumerWidget {
                   TextField(
                     controller: nameController,
                     autofocus: true,
-                    decoration: const InputDecoration(
-                      labelText: '标签名称',
-                      hintText: '例如：flutter',
+                    decoration: InputDecoration(
+                      labelText: l10n.tagNameLabel,
+                      hintText: l10n.tagNameHint,
                     ),
                     maxLength: 20,
                   ),
                   const SizedBox(height: 12),
-                  const Text('选择颜色', style: TextStyle(fontSize: 12)),
+                  Text(
+                    l10n.tagColorLabel,
+                    style: const TextStyle(fontSize: 12),
+                  ),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -197,11 +209,11 @@ class TagsManagementPage extends ConsumerWidget {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context, false),
-                  child: const Text('取消'),
+                  child: Text(l10n.cancel),
                 ),
                 FilledButton(
                   onPressed: () => Navigator.pop(context, true),
-                  child: const Text('创建'),
+                  child: Text(l10n.tagActionCreate),
                 ),
               ],
             );
@@ -220,13 +232,13 @@ class TagsManagementPage extends ConsumerWidget {
             );
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('已创建标签「$name」')),
+            SnackBar(content: Text(l10n.tagCreateSuccess(name))),
           );
         }
       } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('创建失败: $e')),
+            SnackBar(content: Text('${l10n.createFailed}: $e')),
           );
         }
       }
@@ -238,27 +250,28 @@ class TagsManagementPage extends ConsumerWidget {
     WidgetRef ref,
     String oldName,
   ) async {
+    final l10n = AppLocalizations.of(context);
     final nameController = TextEditingController(text: oldName);
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('重命名标签'),
+        title: Text(l10n.tagRenameDialogTitle),
         content: TextField(
           controller: nameController,
           autofocus: true,
-          decoration: const InputDecoration(
-            labelText: '新名称',
+          decoration: InputDecoration(
+            labelText: l10n.newName,
           ),
           maxLength: 20,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('重命名'),
+            child: Text(l10n.tagActionRename),
           ),
         ],
       ),
@@ -273,13 +286,13 @@ class TagsManagementPage extends ConsumerWidget {
             .renameTag(oldName, newName);
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('已重命名，影响 $count 篇笔记')),
+            SnackBar(content: Text(l10n.tagRenameSuccess(count))),
           );
         }
       } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('重命名失败: $e')),
+            SnackBar(content: Text('${l10n.renameFailed}: $e')),
           );
         }
       }
@@ -292,6 +305,7 @@ class TagsManagementPage extends ConsumerWidget {
     String tagName,
     Color? currentColor,
   ) async {
+    final l10n = AppLocalizations.of(context);
     final result = await showDialog<Color>(
       context: context,
       builder: (context) {
@@ -299,7 +313,7 @@ class TagsManagementPage extends ConsumerWidget {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: Text('「$tagName」的颜色'),
+              title: Text(l10n.tagColorDialogTitle(tagName)),
               content: Wrap(
                 spacing: 8,
                 runSpacing: 8,
@@ -330,11 +344,11 @@ class TagsManagementPage extends ConsumerWidget {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('取消'),
+                  child: Text(l10n.cancel),
                 ),
                 FilledButton(
                   onPressed: () => Navigator.pop(context, selected),
-                  child: const Text('确定'),
+                  child: Text(l10n.confirm),
                 ),
               ],
             );
@@ -347,7 +361,7 @@ class TagsManagementPage extends ConsumerWidget {
       await ref.read(tagsManagerProvider.notifier).setColor(tagName, result);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('已更新颜色')),
+          SnackBar(content: Text(l10n.tagColorUpdated)),
         );
       }
     }
@@ -359,24 +373,23 @@ class TagsManagementPage extends ConsumerWidget {
     String tagName,
     int noteCount,
   ) async {
+    final l10n = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('删除标签？'),
-        content: Text(
-          '将从 $noteCount 篇笔记中移除标签「$tagName」，此操作不可撤销。',
-        ),
+        title: Text(l10n.tagDeleteDialogTitle),
+        content: Text(l10n.tagDeleteConfirm(tagName, noteCount)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
-            child: const Text('删除'),
+            child: Text(l10n.tagActionDelete),
           ),
         ],
       ),
@@ -386,13 +399,9 @@ class TagsManagementPage extends ConsumerWidget {
       final count = await ref.read(tagsManagerProvider.notifier).deleteTag(tagName);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('已删除标签，影响 $count 篇笔记')),
+          SnackBar(content: Text(l10n.tagDeleteSuccess(count))),
         );
       }
     }
   }
 }
-
-/// 标签元数据服务（重新导出，方便在 UI 中引用预设颜色）
-// TagMetadataService 由 services/tag_metadata_service.dart 提供
-

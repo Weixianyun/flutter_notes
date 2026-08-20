@@ -123,6 +123,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get tagColorLabel => '选择颜色';
 
   @override
+  String tagColorDialogTitle(String name) {
+    return '「$name」的颜色';
+  }
+
+  @override
   String get tagActionCreate => '创建';
 
   @override
@@ -139,6 +144,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get tagRenameDialogTitle => '重命名标签';
+
+  @override
+  String get newName => '新名称';
 
   @override
   String get tagDeleteDialogTitle => '删除标签？';
@@ -180,6 +188,24 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get tagManagementEmptyTitle => '还没有任何标签';
+
+  @override
+  String get tagManagementEmptySubtitle => '在笔记中添加标签后，可在此管理';
+
+  @override
+  String get cancel => '取消';
+
+  @override
+  String get confirm => '确定';
+
+  @override
+  String get createFailed => '创建失败';
+
+  @override
+  String get renameFailed => '重命名失败';
+
+  @override
   String get sortUpdatedAtDesc => '最近修改';
 
   @override
@@ -193,6 +219,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get sortPriorityDesc => '优先级高→低';
+
+  @override
+  String get sortMenuTooltip => '排序方式';
 
   @override
   String get emptyNotesTitle => '还没有任何笔记';
@@ -220,4 +249,102 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get allTagsChip => '全部';
+
+  @override
+  String selectedNotesCount(int count) {
+    return '已选 $count 篇';
+  }
+
+  @override
+  String get exitSelectionTooltip => '退出';
+
+  @override
+  String get selectAllTooltip => '全选';
+
+  @override
+  String get exportSelectedTooltip => '导出选中';
+
+  @override
+  String get deleteSelectedTooltip => '删除选中';
+
+  @override
+  String get knowledgeGraphTooltip => '知识图谱';
+
+  @override
+  String get searchNotesTooltip => '搜索笔记';
+
+  @override
+  String get moreTooltip => '更多';
+
+  @override
+  String get deleteSelectedDialogTitle => '删除选中的笔记？';
+
+  @override
+  String deleteSelectedDialogContent(int count) {
+    return '将移入回收站 $count 篇笔记。';
+  }
+
+  @override
+  String movedToTrashCount(int count) {
+    return '已移入回收站 $count 篇笔记';
+  }
+
+  @override
+  String movedNoteToTrash(String title) {
+    return '已移入回收站「$title」';
+  }
+
+  @override
+  String get undoAction => '撤销';
+
+  @override
+  String get exportingInProgress => '正在导出...';
+
+  @override
+  String get exportComplete => '导出完成';
+
+  @override
+  String exportSuccessCount(int success, int total) {
+    return '成功导出 $success/$total 篇笔记';
+  }
+
+  @override
+  String exportFailedCount(int count) {
+    return '失败 $count 篇';
+  }
+
+  @override
+  String get exportPath => '导出路径：';
+
+  @override
+  String get exportPathCopied => '路径已复制到剪贴板';
+
+  @override
+  String get copyPathAction => '复制路径';
+
+  @override
+  String get doneAction => '完成';
+
+  @override
+  String exportFailed(String error) {
+    return '导出失败: $error';
+  }
+
+  @override
+  String get noNotesToExport => '没有笔记可导出';
+
+  @override
+  String get comingSoon => '即将推出';
+
+  @override
+  String get clearAllConfirmTitle => '清空所有笔记？';
+
+  @override
+  String get clearAllConfirmContent => '此操作不可撤销，所有笔记将被永久删除。';
+
+  @override
+  String get clearAllConfirmAction => '确认清空';
+
+  @override
+  String get clearAllNotesSuccess => '已清空所有笔记';
 }

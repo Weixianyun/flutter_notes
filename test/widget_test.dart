@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:drift/drift.dart';
@@ -8,6 +9,8 @@ import 'package:flutter_notes/core/router/app_router.dart';
 import 'package:flutter_notes/core/theme/app_theme.dart';
 import 'package:flutter_notes/data/database/app_database.dart';
 import 'package:flutter_notes/data/database/database_provider.dart';
+import 'package:flutter_notes/features/settings/providers/settings_provider.dart';
+import 'package:flutter_notes/l10n/app_localizations.dart';
 import 'package:flutter_notes/services/service_providers.dart';
 
 void main() {
@@ -35,11 +38,56 @@ void main() {
           theme: AppTheme.light(),
           darkTheme: AppTheme.dark(),
           themeMode: ThemeMode.light,
+          locale: const Locale('zh'),
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
           routerConfig: AppRouter.createRouter(),
         ),
       ),
     );
     // 等待数据库初始化和种子数据加载
+    await tester.pumpAndSettle();
+  }
+
+  /// 启动应用并让 MaterialApp 跟随 [appLocaleProvider] 状态。
+  ///
+  /// 语言切换测试使用此函数，验证 setLocale 后 UI 文案实时变化。
+  /// 初始 locale 仍设为中文，确保测试不依赖系统语言。
+  Future<void> pumpAppReactiveLocale(WidgetTester tester) async {
+    final overrides = await testOverrides();
+    // 在 ProviderScope 外部创建一次 router，确保 Consumer 重建时不会创建新 router
+    final router = AppRouter.createRouter();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: overrides,
+        child: Consumer(
+          builder: (context, ref, _) {
+            final locale = ref.watch(appLocaleProvider);
+            return MaterialApp.router(
+              title: 'Flutter Notes',
+              debugShowCheckedModeBanner: false,
+              theme: AppTheme.light(),
+              darkTheme: AppTheme.dark(),
+              themeMode: ThemeMode.light,
+              locale: locale ?? const Locale('zh'),
+              supportedLocales: AppLocalizations.supportedLocales,
+              localizationsDelegates: const [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              routerConfig: router,
+            );
+          },
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
   }
 
@@ -377,6 +425,62 @@ void main() {
 
     // 应显示已存在的标签（来自 seed 数据）
     expect(find.textContaining('#'), findsWidgets);
+  });
+
+  // ── i18n 集成测试 ──
+
+  testWidgets('Settings page shows language switcher', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pumpApp(tester);
+
+    await tester.tap(find.byTooltip('更多'));
+    await tester.pumpAndSettle();
+
+    // 验证设置页标题为中文
+    expect(find.text('设置'), findsOneWidget);
+    // 验证语言选择项存在（语言行 ListTile 与主题 SegmentedButton 都有「跟随系统」，
+    // 至少应出现一次）。
+    expect(find.text('语言'), findsOneWidget);
+    expect(find.text('跟随系统'), findsAtLeastNWidgets(1));
+  });
+
+  testWidgets('Language switcher changes UI locale', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    // 使用响应式 locale 的 pump 助手，确保 setLocale 后 MaterialApp 重建
+    await pumpAppReactiveLocale(tester);
+
+    await tester.tap(find.byTooltip('更多'));
+    await tester.pumpAndSettle();
+
+    // 找到语言行（标题为「语言」的 ListTile）
+    final langTile = find.widgetWithText(ListTile, '语言');
+    expect(langTile, findsOneWidget);
+
+    // 找到该行内的 PopupMenuButton 触发器（图标为 chevron_right）
+    final popupTrigger = find.descendant(
+      of: langTile,
+      matching: find.byIcon(Icons.chevron_right),
+    );
+    expect(popupTrigger, findsOneWidget);
+    await tester.tap(popupTrigger);
+    await tester.pumpAndSettle();
+
+    // 菜单打开后，菜单项位于独立的 Popup 路由中，全局查找
+    expect(find.text('English'), findsOneWidget);
+    await tester.tap(find.text('English'));
+    // 等待 setLocale 持久化 + Consumer 重建 MaterialApp + Localizations 重建
+    await tester.pumpAndSettle(const Duration(milliseconds: 500));
+
+    // AppBar 标题应变为英文
+    expect(find.text('Settings'), findsOneWidget);
   });
 }
 

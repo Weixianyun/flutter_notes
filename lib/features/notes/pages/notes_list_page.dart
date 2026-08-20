@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../../data/models/note_model.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../services/service_providers.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../providers/notes_provider.dart';
@@ -15,7 +17,7 @@ import '../widgets/tag_filter_bar.dart';
 /// 笔记列表页面
 ///
 /// 应用首页，展示所有笔记的卡片列表。
-/// 通过 Riverpod [filteredNotesProvider] 管理过滤后的笔记数据，
+/// 通过 Riverpod [sortedNotesProvider] 管理排序+过滤后的笔记数据，
 /// 支持标签过滤、搜索入口、新建笔记、滑动删除、长按操作菜单。
 /// 长按笔记卡片进入多选模式，支持批量删除和导出。
 class NotesListPage extends ConsumerStatefulWidget {
@@ -66,20 +68,21 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
   }
 
   Future<void> _deleteSelected() async {
+    final l10n = AppLocalizations.of(context);
     final count = _selectedIds.length;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('删除选中的笔记？'),
-        content: Text('将移入回收站 $count 篇笔记。'),
+        title: Text(l10n.deleteSelectedDialogTitle),
+        content: Text(l10n.deleteSelectedDialogContent(count)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('删除'),
+            child: Text(l10n.tagActionDelete),
           ),
         ],
       ),
@@ -93,13 +96,14 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('已移入回收站 $count 篇笔记')),
+        SnackBar(content: Text(l10n.movedToTrashCount(count))),
       );
     }
     _exitSelectionMode();
   }
 
   Future<void> _exportSelected() async {
+    final l10n = AppLocalizations.of(context);
     final notesAsync = ref.read(notesProvider);
     final allNotes = notesAsync.valueOrNull ?? [];
     final selectedNotes =
@@ -109,7 +113,7 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
 
     final messenger = ScaffoldMessenger.of(context);
     messenger.showSnackBar(
-      const SnackBar(content: Text('正在导出...')),
+      SnackBar(content: Text(l10n.exportingInProgress)),
     );
 
     try {
@@ -121,21 +125,21 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('导出完成'),
+          title: Text(l10n.exportComplete),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('成功导出 ${result.success}/${result.total} 篇笔记'),
+              Text(l10n.exportSuccessCount(result.success, result.total)),
               if (result.errors.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Text(
-                  '失败 ${result.failed} 篇',
+                  l10n.exportFailedCount(result.failed),
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
               ],
               const SizedBox(height: 12),
-              const Text('导出路径：'),
+              Text(l10n.exportPath),
               const SizedBox(height: 4),
               Container(
                 padding: const EdgeInsets.all(8),
@@ -152,9 +156,19 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
             ],
           ),
           actions: [
+            TextButton(
+              onPressed: () {
+                Clipboard.setData(
+                    ClipboardData(text: result.directoryPath));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(l10n.exportPathCopied)),
+                );
+              },
+              child: Text(l10n.copyPathAction),
+            ),
             FilledButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('完成'),
+              child: Text(l10n.doneAction),
             ),
           ],
         ),
@@ -162,14 +176,26 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
     } catch (e) {
       if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text('导出失败: $e')),
+        SnackBar(content: Text(l10n.exportFailed(e.toString()))),
       );
     }
     _exitSelectionMode();
   }
 
+  String _labelForSort(BuildContext context, NoteSortOrder order) {
+    final l10n = AppLocalizations.of(context);
+    return switch (order) {
+      NoteSortOrder.updatedAtDesc => l10n.sortUpdatedAtDesc,
+      NoteSortOrder.createdAtDesc => l10n.sortCreatedAtDesc,
+      NoteSortOrder.createdAtAsc => l10n.sortCreatedAtAsc,
+      NoteSortOrder.titleAsc => l10n.sortTitleAsc,
+      NoteSortOrder.priorityDesc => l10n.sortPriorityDesc,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final notesAsync = ref.watch(sortedNotesProvider);
     final allNotesAsync = ref.watch(notesProvider);
     final tagsAsync = ref.watch(allTagsProvider);
@@ -183,11 +209,12 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_isSelectionMode
-            ? '已选 ${_selectedIds.length} 篇'
-            : 'Flutter Notes'),
+            ? l10n.selectedNotesCount(_selectedIds.length)
+            : l10n.appTitle),
         leading: _isSelectionMode
             ? IconButton(
                 icon: const Icon(Icons.close),
+                tooltip: l10n.exitSelectionTooltip,
                 onPressed: _exitSelectionMode,
               )
             : null,
@@ -195,7 +222,7 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
           if (_isSelectionMode) ...[
             IconButton(
               icon: const Icon(Icons.select_all),
-              tooltip: '全选',
+              tooltip: l10n.selectAllTooltip,
               onPressed: () {
                 final notes = notesAsync.valueOrNull ?? [];
                 if (_selectedIds.length == notes.length) {
@@ -207,33 +234,33 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
             ),
             IconButton(
               icon: const Icon(Icons.ios_share),
-              tooltip: '导出选中',
+              tooltip: l10n.exportSelectedTooltip,
               onPressed: _selectedIds.isEmpty ? null : _exportSelected,
             ),
             IconButton(
               icon: Icon(Icons.delete_outline, color: Theme.of(context).colorScheme.error),
-              tooltip: '删除选中',
+              tooltip: l10n.deleteSelectedTooltip,
               onPressed: _selectedIds.isEmpty ? null : _deleteSelected,
             ),
           ] else ...[
             IconButton(
               icon: const Icon(Icons.account_tree_outlined),
-              tooltip: '知识图谱',
+              tooltip: l10n.knowledgeGraphTooltip,
               onPressed: () => context.push(AppRouter.graph),
             ),
             IconButton(
               icon: const Icon(Icons.delete_outline),
-              tooltip: '回收站',
+              tooltip: l10n.recycleBin,
               onPressed: () => context.push(AppRouter.trash),
             ),
             IconButton(
               icon: const Icon(Icons.search),
-              tooltip: '搜索笔记',
+              tooltip: l10n.searchNotesTooltip,
               onPressed: () => context.push(AppRouter.search),
             ),
             PopupMenuButton<NoteSortOrder>(
               icon: const Icon(Icons.sort),
-              tooltip: '排序方式',
+              tooltip: l10n.sortMenuTooltip,
               initialValue: sortOrder,
               onSelected: (order) =>
                   ref.read(noteSortOrderProvider.notifier).setOrder(order),
@@ -253,7 +280,7 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
                                 : Theme.of(context).colorScheme.outline,
                           ),
                           const SizedBox(width: 8),
-                          Text(o.label),
+                          Text(_labelForSort(context, o)),
                         ],
                       ),
                     ),
@@ -262,7 +289,7 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
             ),
             IconButton(
               icon: const Icon(Icons.more_vert),
-              tooltip: '更多',
+              tooltip: l10n.moreTooltip,
               onPressed: () => context.push(AppRouter.settings),
             ),
           ],
@@ -298,7 +325,7 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
           : FloatingActionButton.extended(
               onPressed: () => _createNote(context),
               icon: const Icon(Icons.add),
-              label: const Text('新建笔记'),
+              label: Text(l10n.emptyNotesAction),
             ),
     );
   }
@@ -362,21 +389,23 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
   }
 
   Widget _buildEmptyState(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     return EmptyState(
       icon: Icons.note_add_outlined,
-      title: '还没有任何笔记',
-      subtitle: '点击右下角按钮创建你的第一条笔记',
-      actionLabel: '新建笔记',
+      title: l10n.emptyNotesTitle,
+      subtitle: l10n.emptyNotesSubtitle,
+      actionLabel: l10n.emptyNotesAction,
       onAction: () => _createNote(context),
     );
   }
 
   Widget _buildNoFilteredNotes(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     return EmptyState(
       icon: Icons.filter_alt_off_outlined,
-      title: '没有匹配的笔记',
-      subtitle: '当前标签筛选下没有笔记，试试其他标签',
-      actionLabel: '清除筛选',
+      title: l10n.noFilteredNotesTitle,
+      subtitle: l10n.noFilteredNotesSubtitle,
+      actionLabel: l10n.noFilteredNotesAction,
       onAction: () => ref.read(selectedTagsProvider.notifier).clear(),
     );
   }
@@ -386,11 +415,12 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
     WidgetRef ref,
     Object error,
   ) {
+    final l10n = AppLocalizations.of(context);
     return EmptyState(
       icon: Icons.error_outline,
-      title: '加载失败',
-      subtitle: '数据加载出错：$error',
-      actionLabel: '重试',
+      title: l10n.loadErrorTitle,
+      subtitle: '${l10n.loadErrorTitle}: $error',
+      actionLabel: l10n.loadErrorAction,
       onAction: () => ref.invalidate(notesProvider),
     );
   }
@@ -408,12 +438,13 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
     WidgetRef ref,
     NoteModel note,
   ) {
+    final l10n = AppLocalizations.of(context);
     ref.read(notesProvider.notifier).deleteNote(note.id);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('已移入回收站「${note.title}」'),
+        content: Text(l10n.movedNoteToTrash(note.title)),
         action: SnackBarAction(
-          label: '撤销',
+          label: l10n.undoAction,
           onPressed: () {
             ref.read(notesProvider.notifier).restoreNote(note.id);
           },
