@@ -20,6 +20,7 @@ class NoteCard extends ConsumerWidget {
     this.onLongPress,
     this.isSelected = false,
     this.showCheckbox = false,
+    this.compact = false,
   });
 
   final NoteModel note;
@@ -27,6 +28,7 @@ class NoteCard extends ConsumerWidget {
   final VoidCallback? onLongPress;
   final bool isSelected;
   final bool showCheckbox;
+  final bool compact;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -34,6 +36,7 @@ class NoteCard extends ConsumerWidget {
     final colorScheme = theme.colorScheme;
     final dateFormat = DateFormat('MM/dd HH:mm');
     final tagMetadata = ref.watch(tagMetadataServiceProvider);
+    final padding = compact ? 10.0 : 16.0;
 
     return Card(
       color: isSelected ? colorScheme.primaryContainer : null,
@@ -42,7 +45,7 @@ class NoteCard extends ConsumerWidget {
         onLongPress: onLongPress,
         borderRadius: BorderRadius.circular(16),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(padding),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -81,8 +84,8 @@ class NoteCard extends ConsumerWidget {
                         _PriorityDot(priority: note.priority),
                       ],
                     ),
-                    // ── 摘要 ──
-                    if (note.content.isNotEmpty) ...[
+                    // ── 摘要（紧凑模式下隐藏摘要与标签） ──
+                    if (!compact && note.content.isNotEmpty) ...[
                       const SizedBox(height: 8),
                       Text(
                         note.excerpt,
@@ -94,7 +97,7 @@ class NoteCard extends ConsumerWidget {
                       ),
                     ],
                     // ── 底部信息行 ──
-                    const SizedBox(height: 12),
+                    SizedBox(height: compact ? 6 : 12),
                     Row(
                       children: [
                         Icon(
@@ -110,7 +113,7 @@ class NoteCard extends ConsumerWidget {
                           ),
                         ),
                         const Spacer(),
-                        if (note.tags.isNotEmpty)
+                        if (!compact && note.tags.isNotEmpty)
                           _TagChips(
                             tags: note.tags.take(3).toList(),
                             colorResolver: tagMetadata.getTagColor,

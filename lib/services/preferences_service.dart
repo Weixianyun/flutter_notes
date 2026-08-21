@@ -15,6 +15,7 @@ class PreferencesService {
   static const _seedColorKey = 'seed_color';
   static const _markdownAutoPreviewKey = 'markdown_auto_preview';
   static const _defaultPriorityKey = 'default_priority';
+  static const _notesDensityKey = 'notes_density';
   static const _encryptedTokenKey = 'github_encrypted_token';
   static const _syncRepoOwnerKey = 'sync_repo_owner';
   static const _syncRepoNameKey = 'sync_repo_name';
@@ -71,6 +72,21 @@ class PreferencesService {
   /// 设置默认笔记优先级
   Future<void> setDefaultPriority(String priority) {
     return _prefs.setString(_defaultPriorityKey, priority);
+  }
+
+  // ── 笔记列表密度 ──
+
+  /// 获取笔记列表密度（默认 `comfortable`）
+  ///
+  /// 取值：`comfortable`（默认）、`compact`。
+  /// 返回字符串以保持 PreferencesService 的简单类型边界。
+  String getNotesDensity() {
+    return _prefs.getString(_notesDensityKey) ?? 'comfortable';
+  }
+
+  /// 设置笔记列表密度
+  Future<void> setNotesDensity(String density) {
+    return _prefs.setString(_notesDensityKey, density);
   }
 
   // ── GitHub Token（加密存储）──

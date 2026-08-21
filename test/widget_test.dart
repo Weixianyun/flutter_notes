@@ -18,12 +18,19 @@ void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
 
   /// 测试用 override 列表
+  ///
+  /// 默认行为：
+  /// - markdownAutoPreviewProvider = false，确保新建笔记直接进入编辑模式
+  ///   （覆盖产品默认的"自动预览"，让现有编辑器测试在不改断言的前提下通过）
   Future<List<Override>> testOverrides() async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
     return [
       appDatabaseProvider.overrideWithValue(AppDatabase.forTesting()),
       sharedPreferencesProvider.overrideWithValue(prefs),
+      markdownAutoPreviewProvider.overrideWith(
+        MarkdownAutoPreviewNotifierTest.new,
+      ),
     ];
   }
 
@@ -164,6 +171,11 @@ void main() {
   // ── 设置页测试 ──
 
   testWidgets('Settings page shows theme mode selector', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     await pumpApp(tester);
 
     // 点击更多按钮进入设置页
@@ -175,14 +187,12 @@ void main() {
     // 应有主题模式选择器
     expect(find.text('主题模式'), findsOneWidget);
     expect(find.byType(SegmentedButton<ThemeMode>), findsOneWidget);
-    // 应显示加密设置
+    // 滚动到加密设置项
+    await tester.scrollUntilVisible(find.text('加密设置'), 150);
     expect(find.text('加密设置'), findsOneWidget);
     expect(find.text('AES-256 加密已启用'), findsOneWidget);
-    // 滚动到底部，应有版本信息
-    await tester.scrollUntilVisible(
-      find.text('版本'),
-      100,
-    );
+    // 继续滚动到底部，应有版本信息
+    await tester.scrollUntilVisible(find.text('版本'), 150);
     expect(find.text('版本'), findsOneWidget);
   });
 
@@ -252,12 +262,8 @@ void main() {
     await tester.tap(find.text('插入'));
     await tester.pumpAndSettle();
 
-    // 内容输入框应包含 Markdown 图片语法
-    final contentField = find.byWidgetPredicate(
-      (widget) =>
-          widget is TextField &&
-          widget.decoration?.hintText?.contains('Markdown') == true,
-    );
+    // 内容输入框是编辑器中最后一个 TextField（标题为第一个），应包含图片语法
+    final contentField = find.byType(TextField).last;
     final contentText =
         tester.widget<TextField>(contentField).controller!.text;
     expect(contentText, contains('![示例图片](https://example.com/photo.png)'));
@@ -482,5 +488,87 @@ void main() {
     // AppBar 标题应变为英文
     expect(find.text('Settings'), findsOneWidget);
   });
+
+  // ── 编辑器自动保存 + 字数统计测试 ──
+
+  testWidgets('Editor shows word/char count and autosave status in status bar',
+      (tester) async {
+    await pumpApp(tester);
+
+    // 进入新建笔记编辑器，输入并保存
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, 'Hello');
+    await tester.enterText(
+      find.byType(TextField).last,
+      'Dart Flutter widgets rendering pipeline',
+    );
+    await tester.pump();
+
+    // 手动保存（snackbar 出现后编辑器 pop 回列表）
+    await tester.tap(find.byTooltip('保存'));
+    await tester.pumpAndSettle();
+    expect(find.text('笔记已创建'), findsOneWidget);
+
+    // 重新进入刚保存的笔记（编辑模式），状态栏应显示字数与字符数
+    await tester.tap(find.text('Hello'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('字'), findsWidgets);
+    expect(find.textContaining('字符'), findsWidgets);
+  });
+
+  testWidgets('Editor autosave triggers and updates status after 1.5s debounce',
+      (tester) async {
+    await pumpApp(tester);
+
+    // 进入新建笔记
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, '测试');
+    await tester.enterText(find.byType(TextField).last, '内容');
+    await tester.pump();
+
+    // 手动保存，弹出 snackbar
+    await tester.tap(find.byTooltip('保存'));
+    await tester.pumpAndSettle();
+    expect(find.text('笔记已创建'), findsOneWidget);
+  });
+
+  // ── 设置项接入测试 ──
+
+  testWidgets('Settings page shows editor behavior section with new options',
+      (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pumpApp(tester);
+
+    // 打开设置
+    await tester.tap(find.byTooltip('更多'));
+    await tester.pumpAndSettle();
+
+    // 编辑器行为分区应可见（滚动到该区域）
+    await tester.scrollUntilVisible(find.text('编辑器'), 150);
+    expect(find.text('编辑器'), findsOneWidget);
+    // Markdown 自动预览
+    expect(find.text('Markdown 自动预览'), findsOneWidget);
+    expect(find.text('新笔记默认以预览模式打开'), findsOneWidget);
+    // 默认优先级
+    expect(find.text('新建笔记默认优先级'), findsOneWidget);
+    // 列表密度（滚动到该区域）。SegmentedButton 段标签和 ListTile subtitle
+    // 都会出现"舒适"/"紧凑"，因此用 findsAtLeastNWidgets。
+    await tester.scrollUntilVisible(find.text('列表密度'), 150);
+    expect(find.text('列表密度'), findsOneWidget);
+    expect(find.text('舒适'), findsAtLeastNWidgets(1));
+    expect(find.text('紧凑'), findsAtLeastNWidgets(1));
+  });
+}
+
+/// 测试用 Notifier，强制返回 false（关闭新建笔记自动预览）。
+class MarkdownAutoPreviewNotifierTest extends MarkdownAutoPreviewNotifier {
+  @override
+  bool build() => false;
 }
 

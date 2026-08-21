@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../data/models/note_model.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../notes/providers/notes_provider.dart';
 import '../providers/settings_provider.dart';
@@ -141,6 +142,64 @@ class SettingsPage extends ConsumerWidget {
           ),
           const Divider(height: 32),
 
+          // ── 编辑器行为 ──
+          _SectionHeader(title: l10n.editorBehaviorSection),
+          SwitchListTile(
+            secondary: const Icon(Icons.preview_outlined),
+            title: Text(l10n.markdownAutoPreview),
+            subtitle: Text(l10n.markdownAutoPreviewSubtitle),
+            value: ref.watch(markdownAutoPreviewProvider),
+            onChanged: (v) =>
+                ref.read(markdownAutoPreviewProvider.notifier).setEnabled(v),
+          ),
+          ListTile(
+            leading: const Icon(Icons.flag_outlined),
+            title: Text(l10n.defaultNewNotePriority),
+            subtitle: Text(_priorityLabel(
+                ref.watch(defaultPriorityProvider), l10n)),
+            trailing: PopupMenuButton<NotePriority>(
+              icon: const Icon(Icons.chevron_right),
+              initialValue: ref.watch(defaultPriorityProvider),
+              onSelected: (p) =>
+                  ref.read(defaultPriorityProvider.notifier).setPriority(p),
+              itemBuilder: (context) => NotePriority.values
+                  .map(
+                    (p) => PopupMenuItem<NotePriority>(
+                      value: p,
+                      child: Text(_priorityLabel(p, l10n)),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.density_small),
+            title: Text(l10n.listDensity),
+            subtitle: Text(_densityLabel(
+                ref.watch(notesDensityProvider), l10n)),
+            trailing: SegmentedButton<NotesDensity>(
+              segments: [
+                ButtonSegment(
+                  value: NotesDensity.comfortable,
+                  label: Text(l10n.listDensityComfortable),
+                ),
+                ButtonSegment(
+                  value: NotesDensity.compact,
+                  label: Text(l10n.listDensityCompact),
+                ),
+              ],
+              selected: {ref.watch(notesDensityProvider)},
+              onSelectionChanged: (set) => ref
+                  .read(notesDensityProvider.notifier)
+                  .setDensity(set.first),
+              style: const ButtonStyle(
+                visualDensity: VisualDensity.compact,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
+          ),
+          const Divider(height: 32),
+
           // ── 同步 ──
           _SectionHeader(title: l10n.syncSection),
           ListTile(
@@ -252,6 +311,21 @@ class SettingsPage extends ConsumerWidget {
       'en' => l10n.languageEnglish,
       'zh' => l10n.languageChinese,
       _ => l10n.languageFollowSystem,
+    };
+  }
+
+  String _priorityLabel(NotePriority priority, AppLocalizations l10n) {
+    return switch (priority) {
+      NotePriority.low => l10n.priorityLow,
+      NotePriority.medium => l10n.priorityMedium,
+      NotePriority.high => l10n.priorityHigh,
+    };
+  }
+
+  String _densityLabel(NotesDensity density, AppLocalizations l10n) {
+    return switch (density) {
+      NotesDensity.comfortable => l10n.listDensityComfortable,
+      NotesDensity.compact => l10n.listDensityCompact,
     };
   }
 

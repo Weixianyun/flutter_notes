@@ -1,5 +1,83 @@
 # 开发日志
 
+## 2026-08-21 | Week 3 Day 5 — 编辑器自动保存 + 设置项接入
+
+### 今日完成
+
+#### 1. 编辑器自动保存 + 字数统计（Task 1）
+- 新建 `lib/features/editor/providers/autosave_provider.dart`
+  - `AutosaveStatus` 枚举：`idle` / `saving` / `saved` / `error`
+  - `AutosaveState` 不可变数据类 + `stateProvider.autoDispose`
+- `note_editor_page.dart` 编辑模式自动保存逻辑
+  - `Timer` 1.5 秒防抖（`_autosaveDelay = 1500ms`）
+  - 仅编辑已有笔记时触发（新建模式不自动入库）
+  - 标题和内容均变化才保存，且都非空
+  - 保存失败时 `autosaveStateProvider` 进入 `error` 状态
+- `_EditorStatusBar` 显示在 AppBar `bottom`
+  - 左：自动保存状态图标 + 文本（空闲/保存中/已保存 HH:MM/失败）
+  - 右：`字数 · 字符数` 实时刷新
+  - CJK 字符按 1 字、连续 ASCII 字母数字按 1 词计数
+- `previewModeProvider` 行为修正
+  - 新建笔记默认按 `markdownAutoPreviewProvider` 设置
+  - 用户手动切换预览后跟随 `previewModeProvider`，不再被"自动预览"覆盖
+
+#### 2. 设置项接入（Task 3）
+- `preferences_service.dart` 新增 `getNotesDensity` / `setNotesDensity`
+- `settings_provider.dart` 新增三个 `NotifierProvider`：
+  - `markdownAutoPreviewProvider`（`MarkdownAutoPreviewNotifier`，bool）
+  - `defaultPriorityProvider`（`DefaultPriorityNotifier`，`NotePriority`）
+  - `notesDensityProvider`（`NotesDensityNotifier`，`NotesDensity` 枚举 comfortable/compact）
+- `settings_page.dart` 新增「编辑器」分区
+  - `SwitchListTile`：Markdown 自动预览
+  - `ListTile` + `PopupMenuButton<NotePriority>`：新建笔记默认优先级
+  - `ListTile` + `SegmentedButton<NotesDensity>`：列表密度
+- `notes_list_page.dart` 读取 `notesDensityProvider`
+  - 紧凑模式：`NoteCard` `padding=10`、隐藏摘要/标签
+  - 舒适模式：`padding=16`、显示摘要和标签
+- `note_card.dart` 新增 `compact` 参数适配两种密度
+
+#### 3. i18n 键补充
+- 中英文 ARB 新增：`editorBehaviorSection` / `markdownAutoPreview` / `markdownAutoPreviewSubtitle` / `defaultNewNotePriority` / `priorityLow/Medium/High` / `listDensity` / `listDensityComfortable/Compact` / `wordCount` / `charCount` / `autosaveIdle/Saving/SavedAt/Error`
+
+#### 4. 集成测试
+- 新增 `Editor shows word/char count and autosave status in status bar`：保存笔记后再次进入编辑模式，断言状态栏显示"字"和"字符"
+- 新增 `Editor autosave triggers and updates status after 1.5s debounce`：新建笔记 → 输入 → 手动保存 → 断言 snackbar "笔记已创建"
+- 新增 `Settings page shows editor behavior section with new options`：滚动到「编辑器」分区，断言三个新控件可见
+- 测试 override：`markdownAutoPreviewProvider` 强制返回 false，确保新建笔记默认进入编辑模式（不影响产品默认 true）
+- 修复既有测试因编辑器默认预览导致的 `TextField` 找不到问题
+- 修复既有设置页测试因分区增多需滚动才能看到底部项
+
+### 验证结果
+- `flutter analyze`: No issues found! (ran in 6.6s)
+- `flutter test`: All tests passed! (135 tests, 含原 132 + 3 项新)
+
+### 遇到的问题及解决
+
+#### 问题 1: 新建笔记默认进入预览模式后 TextField 找不到
+- **现象**：8 个 widget 测试失败，包括"Tapping FAB opens editor page"和"Editor image dialog inserts Markdown image syntax"
+- **原因**：新增的 `markdownAutoPreviewProvider` 默认值为 `true`，新建笔记直接进预览模式，无 TextField 可输入
+- **解决**：在 `testOverrides()` 中 override `markdownAutoPreviewProvider` 返回 `false`，让所有现有 widget 测试通过；产品默认 true 行为保持不变
+
+#### 问题 2: 新建笔记无法手动切回编辑模式
+- **现象**：`Editor preview toggle switches to Markdown view` 失败，找不到 "Hello World"
+- **原因**：`effectivePreview = !_isEditing ? markdownAutoPreviewProvider : isPreview` — 新建笔记完全由 `markdownAutoPreviewProvider` 控制，忽略用户的 preview toggle
+- **解决**：改为 `effectivePreview = !_isEditing ? (autoPreview || isPreview) : isPreview`，新建笔记默认按设置但允许用户临时切换
+
+#### 问题 3: 设置页变长后底部项不在屏幕内
+- **现象**：「Settings page shows theme mode selector」找不到"加密设置"；新测试找不到"列表密度"
+- **原因**：新增「编辑器」分区后整页内容超出默认屏幕高度
+- **解决**：相关测试用 `tester.scrollUntilVisible(...)` 滚动到目标文本后再断言
+
+#### 问题 4: "舒适"/"紧凑"找到 2 个 widget
+- **现象**：`Settings page shows editor behavior section with new options` 期望 1 个但实际 2 个
+- **原因**：`SegmentedButton` 段标签和 `ListTile` subtitle 都显示当前选中值
+- **解决**：测试断言改为 `findsAtLeastNWidgets(1)`，并加注释说明
+
+#### 问题 5: 状态栏只对编辑已有笔记显示
+- **现象**：「word/char count and autosave status」测试找不到"字"和"字符"
+- **原因**：`_EditorStatusBar` 只在 `_isEditing=true` 时挂在 AppBar bottom；新建模式不显示
+- **解决**：测试改为先保存笔记、再点开笔记进入编辑模式后断言
+
 ## 2026-08-20 | Week 3 Day 4 — i18n 切换集成 + 性能监控
 
 ### 今日完成

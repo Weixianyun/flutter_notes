@@ -18,6 +18,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appearanceSection => '外观';
 
   @override
+  String get editorBehaviorSection => '编辑器';
+
+  @override
   String get themeModeLabel => '主题模式';
 
   @override
@@ -347,4 +350,73 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get clearAllNotesSuccess => '已清空所有笔记';
+
+  @override
+  String wordCount(int count) {
+    return '$count 字';
+  }
+
+  @override
+  String charCount(int count) {
+    return '$count 字符';
+  }
+
+  @override
+  String get autosaveIdle => '空闲';
+
+  @override
+  String get autosaveSaving => '保存中...';
+
+  @override
+  String autosaveSavedAt(String time) {
+    return '已保存于 $time';
+  }
+
+  @override
+  String get autosaveError => '自动保存失败';
+
+  @override
+  String get editorTitleNew => '新建笔记';
+
+  @override
+  String get editorTitleEdit => '编辑笔记';
+
+  @override
+  String get editTooltip => '编辑';
+
+  @override
+  String get previewTooltip => '预览';
+
+  @override
+  String get exportTooltip => '导出';
+
+  @override
+  String get saveAction => '保存';
+
+  @override
+  String get markdownAutoPreview => 'Markdown 自动预览';
+
+  @override
+  String get markdownAutoPreviewSubtitle => '新笔记默认以预览模式打开';
+
+  @override
+  String get defaultNewNotePriority => '新建笔记默认优先级';
+
+  @override
+  String get priorityLow => '低';
+
+  @override
+  String get priorityMedium => '中';
+
+  @override
+  String get priorityHigh => '高';
+
+  @override
+  String get listDensity => '列表密度';
+
+  @override
+  String get listDensityComfortable => '舒适';
+
+  @override
+  String get listDensityCompact => '紧凑';
 }

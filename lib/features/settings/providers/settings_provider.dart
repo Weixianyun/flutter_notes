@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../data/models/note_model.dart';
 import '../../../services/service_providers.dart';
+
+/// 笔记列表密度
+enum NotesDensity { comfortable, compact }
 
 /// 主题模式状态管理
 ///
@@ -48,6 +52,83 @@ class SeedColorNotifier extends Notifier<Color> {
 /// 种子色 Provider
 final seedColorProvider =
     NotifierProvider<SeedColorNotifier, Color>(SeedColorNotifier.new);
+
+/// Markdown 自动预览状态管理
+///
+/// 控制新建笔记是否默认进入预览模式。持久化到 SharedPreferences。
+class MarkdownAutoPreviewNotifier extends Notifier<bool> {
+  @override
+  bool build() {
+    final prefs = ref.read(preferencesServiceProvider);
+    return prefs.getMarkdownAutoPreview();
+  }
+
+  void setEnabled(bool value) {
+    final prefs = ref.read(preferencesServiceProvider);
+    prefs.setMarkdownAutoPreview(value);
+    state = value;
+  }
+}
+
+/// Markdown 自动预览 Provider
+final markdownAutoPreviewProvider =
+    NotifierProvider<MarkdownAutoPreviewNotifier, bool>(
+  MarkdownAutoPreviewNotifier.new,
+);
+
+/// 新建笔记默认优先级状态管理
+///
+/// 持久化 [NotePriority] 名称到 SharedPreferences，新建笔记时读取。
+class DefaultPriorityNotifier extends Notifier<NotePriority> {
+  @override
+  NotePriority build() {
+    final prefs = ref.read(preferencesServiceProvider);
+    final name = prefs.getDefaultPriority();
+    return NotePriority.values.firstWhere(
+      (p) => p.name == name,
+      orElse: () => NotePriority.medium,
+    );
+  }
+
+  void setPriority(NotePriority priority) {
+    final prefs = ref.read(preferencesServiceProvider);
+    prefs.setDefaultPriority(priority.name);
+    state = priority;
+  }
+}
+
+/// 新建笔记默认优先级 Provider
+final defaultPriorityProvider =
+    NotifierProvider<DefaultPriorityNotifier, NotePriority>(
+  DefaultPriorityNotifier.new,
+);
+
+/// 笔记列表密度状态管理
+///
+/// 持久化到 SharedPreferences，列表页根据此值调整卡片内边距。
+class NotesDensityNotifier extends Notifier<NotesDensity> {
+  @override
+  NotesDensity build() {
+    final prefs = ref.read(preferencesServiceProvider);
+    final value = prefs.getNotesDensity();
+    return NotesDensity.values.firstWhere(
+      (d) => d.name == value,
+      orElse: () => NotesDensity.comfortable,
+    );
+  }
+
+  void setDensity(NotesDensity density) {
+    final prefs = ref.read(preferencesServiceProvider);
+    prefs.setNotesDensity(density.name);
+    state = density;
+  }
+}
+
+/// 笔记列表密度 Provider
+final notesDensityProvider =
+    NotifierProvider<NotesDensityNotifier, NotesDensity>(
+  NotesDensityNotifier.new,
+);
 
 /// 加密状态 Provider（用于设置页展示）
 final encryptionStatusProvider = Provider<bool>((ref) {

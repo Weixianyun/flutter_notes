@@ -3,6 +3,7 @@
   "appTitle": "Flutter Notes",
   "settingsTitle": "Settings",
   "appearanceSection": "Appearance",
+  "editorBehaviorSection": "Editor",
   "themeModeLabel": "Theme mode",
   "themeModeLight": "Light",
   "themeModeDark": "Dark",
@@ -169,5 +170,41 @@
   "clearAllConfirmTitle": "Clear all notes?",
   "clearAllConfirmContent": "This action cannot be undone. All notes will be permanently deleted.",
   "clearAllConfirmAction": "Confirm clear",
-  "clearAllNotesSuccess": "All notes cleared"
+  "clearAllNotesSuccess": "All notes cleared",
+  "wordCount": "{count, plural, =0{No words} =1{1 word} other{{count} words}}",
+  "@wordCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "charCount": "{count, plural, =0{No chars} =1{1 char} other{{count} chars}}",
+  "@charCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "autosaveIdle": "Idle",
+  "autosaveSaving": "Saving...",
+  "autosaveSavedAt": "Saved at {time}",
+  "@autosaveSavedAt": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
+  "autosaveError": "Autosave failed",
+  "editorTitleNew": "New note",
+  "editorTitleEdit": "Edit note",
+  "editTooltip": "Edit",
+  "previewTooltip": "Preview",
+  "exportTooltip": "Export",
+  "saveAction": "Save",
+  "markdownAutoPreview": "Markdown auto preview",
+  "markdownAutoPreviewSubtitle": "Open new notes in preview mode",
+  "defaultNewNotePriority": "Default priority for new notes",
+  "priorityLow": "Low",
+  "priorityMedium": "Medium",
+  "priorityHigh": "High",
+  "listDensity": "List density",
+  "listDensityComfortable": "Comfortable",
+  "listDensityCompact": "Compact"
 }

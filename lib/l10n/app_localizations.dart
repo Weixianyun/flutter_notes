@@ -116,6 +116,12 @@ abstract class AppLocalizations {
   /// **'Appearance'**
   String get appearanceSection;
 
+  /// No description provided for @editorBehaviorSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Editor'**
+  String get editorBehaviorSection;
+
   /// No description provided for @themeModeLabel.
   ///
   /// In en, this message translates to:
@@ -715,6 +721,132 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'All notes cleared'**
   String get clearAllNotesSuccess;
+
+  /// No description provided for @wordCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No words} =1{1 word} other{{count} words}}'**
+  String wordCount(int count);
+
+  /// No description provided for @charCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No chars} =1{1 char} other{{count} chars}}'**
+  String charCount(int count);
+
+  /// No description provided for @autosaveIdle.
+  ///
+  /// In en, this message translates to:
+  /// **'Idle'**
+  String get autosaveIdle;
+
+  /// No description provided for @autosaveSaving.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving...'**
+  String get autosaveSaving;
+
+  /// No description provided for @autosaveSavedAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved at {time}'**
+  String autosaveSavedAt(String time);
+
+  /// No description provided for @autosaveError.
+  ///
+  /// In en, this message translates to:
+  /// **'Autosave failed'**
+  String get autosaveError;
+
+  /// No description provided for @editorTitleNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New note'**
+  String get editorTitleNew;
+
+  /// No description provided for @editorTitleEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit note'**
+  String get editorTitleEdit;
+
+  /// No description provided for @editTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get editTooltip;
+
+  /// No description provided for @previewTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview'**
+  String get previewTooltip;
+
+  /// No description provided for @exportTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Export'**
+  String get exportTooltip;
+
+  /// No description provided for @saveAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get saveAction;
+
+  /// No description provided for @markdownAutoPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Markdown auto preview'**
+  String get markdownAutoPreview;
+
+  /// No description provided for @markdownAutoPreviewSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Open new notes in preview mode'**
+  String get markdownAutoPreviewSubtitle;
+
+  /// No description provided for @defaultNewNotePriority.
+  ///
+  /// In en, this message translates to:
+  /// **'Default priority for new notes'**
+  String get defaultNewNotePriority;
+
+  /// No description provided for @priorityLow.
+  ///
+  /// In en, this message translates to:
+  /// **'Low'**
+  String get priorityLow;
+
+  /// No description provided for @priorityMedium.
+  ///
+  /// In en, this message translates to:
+  /// **'Medium'**
+  String get priorityMedium;
+
+  /// No description provided for @priorityHigh.
+  ///
+  /// In en, this message translates to:
+  /// **'High'**
+  String get priorityHigh;
+
+  /// No description provided for @listDensity.
+  ///
+  /// In en, this message translates to:
+  /// **'List density'**
+  String get listDensity;
+
+  /// No description provided for @listDensityComfortable.
+  ///
+  /// In en, this message translates to:
+  /// **'Comfortable'**
+  String get listDensityComfortable;
+
+  /// No description provided for @listDensityCompact.
+  ///
+  /// In en, this message translates to:
+  /// **'Compact'**
+  String get listDensityCompact;
 }
 
 class _AppLocalizationsDelegate

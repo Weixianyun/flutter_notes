@@ -18,6 +18,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appearanceSection => 'Appearance';
 
   @override
+  String get editorBehaviorSection => 'Editor';
+
+  @override
   String get themeModeLabel => 'Theme mode';
 
   @override
@@ -370,4 +373,87 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get clearAllNotesSuccess => 'All notes cleared';
+
+  @override
+  String wordCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count words',
+      one: '1 word',
+      zero: 'No words',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String charCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count chars',
+      one: '1 char',
+      zero: 'No chars',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get autosaveIdle => 'Idle';
+
+  @override
+  String get autosaveSaving => 'Saving...';
+
+  @override
+  String autosaveSavedAt(String time) {
+    return 'Saved at $time';
+  }
+
+  @override
+  String get autosaveError => 'Autosave failed';
+
+  @override
+  String get editorTitleNew => 'New note';
+
+  @override
+  String get editorTitleEdit => 'Edit note';
+
+  @override
+  String get editTooltip => 'Edit';
+
+  @override
+  String get previewTooltip => 'Preview';
+
+  @override
+  String get exportTooltip => 'Export';
+
+  @override
+  String get saveAction => 'Save';
+
+  @override
+  String get markdownAutoPreview => 'Markdown auto preview';
+
+  @override
+  String get markdownAutoPreviewSubtitle => 'Open new notes in preview mode';
+
+  @override
+  String get defaultNewNotePriority => 'Default priority for new notes';
+
+  @override
+  String get priorityLow => 'Low';
+
+  @override
+  String get priorityMedium => 'Medium';
+
+  @override
+  String get priorityHigh => 'High';
+
+  @override
+  String get listDensity => 'List density';
+
+  @override
+  String get listDensityComfortable => 'Comfortable';
+
+  @override
+  String get listDensityCompact => 'Compact';
 }

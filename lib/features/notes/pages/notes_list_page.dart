@@ -8,7 +8,8 @@ import '../../../data/models/note_model.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../services/service_providers.dart';
 import '../../../shared/widgets/empty_state.dart';
-import '../providers/notes_provider.dart';
+import '../../notes/providers/notes_provider.dart';
+import '../../settings/providers/settings_provider.dart';
 import '../providers/sort_provider.dart';
 import '../providers/tags_provider.dart';
 import '../widgets/note_card.dart';
@@ -335,6 +336,10 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
     WidgetRef ref,
     List<NoteModel> notes,
   ) {
+    final density = ref.watch(notesDensityProvider);
+    final isCompact = density == NotesDensity.compact;
+    final cardPadding = isCompact ? 4.0 : 8.0;
+
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
       itemCount: notes.length,
@@ -344,7 +349,7 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
         final note = notes[index];
         final isSelected = _selectedIds.contains(note.id);
         return Padding(
-          padding: const EdgeInsets.only(bottom: 8),
+          padding: EdgeInsets.only(bottom: cardPadding),
           child: Dismissible(
             key: ValueKey(note.id),
             direction: _isSelectionMode
@@ -367,6 +372,7 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
               note: note,
               isSelected: _isSelectionMode && isSelected,
               showCheckbox: _isSelectionMode,
+              compact: isCompact,
               onTap: () {
                 if (_isSelectionMode) {
                   _toggleSelection(note.id);

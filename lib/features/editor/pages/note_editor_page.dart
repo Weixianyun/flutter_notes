@@ -1,10 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/models/note_model.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../services/service_providers.dart';
 import '../../notes/providers/notes_provider.dart';
+import '../../settings/providers/settings_provider.dart';
+import '../providers/autosave_provider.dart';
 import '../providers/editor_provider.dart';
 import '../widgets/markdown_preview.dart';
 
@@ -13,6 +18,11 @@ import '../widgets/markdown_preview.dart';
 /// 支持新建和编辑笔记，提供 Markdown 编辑/预览切换、
 /// 优先级选择和格式工具栏。通过 Riverpod [notesProvider]
 /// 管理数据读写。
+///
+/// ## 自动保存
+/// 编辑模式下，标题或内容变更后 1.5 秒防抖触发 [autosaveStateProvider]
+/// 过渡：`idle` → `saving` → `saved(timestamp)`。保存失败显示 `error` 状态。
+/// AppBar 底部展示字数、字符数和保存状态指示器。
 class NoteEditorPage extends ConsumerStatefulWidget {
   const NoteEditorPage({super.key, this.noteId});
 
@@ -34,6 +44,16 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
   bool _isLoading = false;
   bool _isSaving = false;
 
+  /// 自动保存防抖定时器
+  Timer? _autosaveTimer;
+
+  /// 触发自动保存的空闲时长
+  static const _autosaveDelay = Duration(milliseconds: 1500);
+
+  /// 最后一次保存成功的标题/内容快照，用于检测实际变更
+  String _lastSavedTitle = '';
+  String _lastSavedContent = '';
+
   @override
   void initState() {
     super.initState();
@@ -48,7 +68,8 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
       _loadNote();
     } else {
       _isEditing = false;
-      _priority = NotePriority.medium;
+      // 新建笔记：使用用户配置的默认优先级
+      _priority = ref.read(defaultPriorityProvider);
       _tags = [];
     }
 
@@ -63,6 +84,8 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
     if (note != null && mounted) {
       _titleController.text = note.title;
       _contentController.text = note.content;
+      _lastSavedTitle = note.title;
+      _lastSavedContent = note.content;
       setState(() {
         _priority = note.priority;
         _tags = List.from(note.tags);
@@ -75,6 +98,7 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
 
   @override
   void dispose() {
+    _autosaveTimer?.cancel();
     _titleController.dispose();
     _contentController.dispose();
     super.dispose();
@@ -82,16 +106,72 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
 
   void _markChanged() {
     if (!_hasChanges) setState(() => _hasChanges = true);
+    if (_isEditing) _scheduleAutosave();
+  }
+
+  /// 调度一次防抖自动保存
+  void _scheduleAutosave() {
+    _autosaveTimer?.cancel();
+    _autosaveTimer = Timer(_autosaveDelay, _autosave);
+  }
+
+  /// 执行自动保存（仅编辑模式）
+  Future<void> _autosave() async {
+    if (!_isEditing || !mounted) return;
+
+    final title = _titleController.text.trim();
+    final content = _contentController.text.trim();
+
+    // 标题和内容都没变，跳过
+    if (title == _lastSavedTitle && content == _lastSavedContent) return;
+
+    // 两者都为空也不保存
+    if (title.isEmpty && content.isEmpty) return;
+
+    ref.read(autosaveStateProvider.notifier).state =
+        const AutosaveState(status: AutosaveStatus.saving);
+
+    final note = NoteModel(
+      id: widget.noteId,
+      title: title,
+      content: content,
+      priority: _priority,
+      tags: _tags,
+    );
+
+    try {
+      await ref.read(notesProvider.notifier).updateNote(note);
+      _lastSavedTitle = title;
+      _lastSavedContent = content;
+      if (!mounted) return;
+      ref.read(autosaveStateProvider.notifier).state = AutosaveState(
+        status: AutosaveStatus.saved,
+        savedAt: DateTime.now(),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ref.read(autosaveStateProvider.notifier).state = AutosaveState(
+        status: AutosaveStatus.error,
+        errorMessage: e.toString(),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final isPreview = ref.watch(previewModeProvider);
+    // 新建笔记：默认按设置决定（auto preview），用户手动切换后跟随 previewModeProvider。
+    // 编辑笔记：完全跟随用户切换状态。
+    final autoPreview = ref.watch(markdownAutoPreviewProvider);
+    final effectivePreview = !_isEditing
+        ? (autoPreview || isPreview)
+        : isPreview;
     final colorScheme = Theme.of(context).colorScheme;
 
     if (_isLoading) {
       return Scaffold(
-        appBar: AppBar(title: const Text('加载中...')),
+        appBar: AppBar(title: Text(l10n.appTitle)),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
@@ -103,29 +183,37 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Text(_isEditing ? '编辑笔记' : '新建笔记'),
+          title: Text(_isEditing ? l10n.editorTitleEdit : l10n.editorTitleNew),
           actions: [
             IconButton(
-              icon: Icon(isPreview ? Icons.edit : Icons.preview),
-              tooltip: isPreview ? '编辑' : '预览',
+              icon: Icon(effectivePreview ? Icons.edit : Icons.preview),
+              tooltip: effectivePreview ? l10n.editTooltip : l10n.previewTooltip,
               onPressed: () {
-                ref.read(previewModeProvider.notifier).state = !isPreview;
+                ref.read(previewModeProvider.notifier).state = !effectivePreview;
               },
             ),
             if (_isEditing)
               IconButton(
                 icon: const Icon(Icons.ios_share),
-                tooltip: '导出',
+                tooltip: l10n.exportTooltip,
                 onPressed: _exportCurrentNote,
               ),
             IconButton(
               icon: const Icon(Icons.check),
-              tooltip: '保存',
+              tooltip: l10n.saveAction,
               onPressed: _isSaving ? null : _save,
             ),
           ],
+          bottom: _isEditing
+              ? PreferredSize(
+                  preferredSize: const Size.fromHeight(36),
+                  child: _EditorStatusBar(
+                    contentController: _contentController,
+                  ),
+                )
+              : null,
         ),
-        body: isPreview ? _buildPreview() : _buildEditor(colorScheme),
+        body: effectivePreview ? _buildPreview() : _buildEditor(colorScheme),
       ),
     );
   }
@@ -144,7 +232,7 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
                   fontWeight: FontWeight.bold,
                 ),
             decoration: const InputDecoration(
-              hintText: '输入标题...',
+              hintText: '...',
               border: InputBorder.none,
               filled: false,
             ),
@@ -198,14 +286,7 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
             expands: true,
             textAlignVertical: TextAlignVertical.top,
             decoration: const InputDecoration(
-              hintText: '开始输入 Markdown 内容...\n\n'
-                  '## 支持的语法\n\n'
-                  '- **加粗** / *斜体*\n'
-                  '- `行内代码`\n'
-                  '- > 引用\n'
-                  '- - [ ] 待办列表\n'
-                  '- | 表格 |\n'
-                  '- ```代码块```',
+              hintText: '',
               border: InputBorder.none,
               filled: false,
               contentPadding: EdgeInsets.all(16),
@@ -248,6 +329,9 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
   // ── 保存 ──
 
   Future<void> _save() async {
+    // 取消挂起的自动保存
+    _autosaveTimer?.cancel();
+
     final title = _titleController.text.trim();
     final content = _contentController.text.trim();
 
@@ -378,6 +462,103 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
       setState(() => _hasChanges = false);
       Navigator.of(context).pop();
     }
+  }
+}
+
+// ── 编辑器底部状态栏：字数 + 字符数 + 自动保存状态 ──
+
+class _EditorStatusBar extends ConsumerWidget {
+  const _EditorStatusBar({
+    required this.contentController,
+  });
+
+  final TextEditingController contentController;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final colorScheme = Theme.of(context).colorScheme;
+    final autosave = ref.watch(autosaveStateProvider);
+
+    // 监听内容变化以刷新字数统计
+    final content = contentController.text;
+    final words = _countWords(content);
+    final chars = content.length;
+
+    String statusText;
+    Color statusColor;
+    IconData statusIcon;
+
+    switch (autosave.status) {
+      case AutosaveStatus.idle:
+        statusText = l10n.autosaveIdle;
+        statusColor = colorScheme.onSurfaceVariant;
+        statusIcon = Icons.edit_note;
+      case AutosaveStatus.saving:
+        statusText = l10n.autosaveSaving;
+        statusColor = colorScheme.primary;
+        statusIcon = Icons.cloud_sync_outlined;
+      case AutosaveStatus.saved:
+        final time = _formatTime(autosave.savedAt!);
+        statusText = l10n.autosaveSavedAt(time);
+        statusColor = colorScheme.tertiary;
+        statusIcon = Icons.check_circle_outline;
+      case AutosaveStatus.error:
+        statusText = l10n.autosaveError;
+        statusColor = colorScheme.error;
+        statusIcon = Icons.error_outline;
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        border: Border(
+          top: BorderSide(color: colorScheme.outlineVariant, width: 0.5),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(statusIcon, size: 14, color: statusColor),
+          const SizedBox(width: 6),
+          Text(
+            statusText,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: statusColor,
+                ),
+          ),
+          const Spacer(),
+          Text(
+            '${l10n.wordCount(words)} · ${l10n.charCount(chars)}',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 按空白字符分词计算字数
+  int _countWords(String text) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return 0;
+    // CJK 字符按 1 字计数，连续 ASCII 字母/数字按 1 词计数
+    final cjk = RegExp(r'[\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af]');
+    final cjkCount = cjk.allMatches(trimmed).length;
+    final ascii = trimmed
+        .replaceAll(cjk, ' ')
+        .split(RegExp(r'\s+'))
+        .where((s) => s.isNotEmpty)
+        .length;
+    return cjkCount + ascii;
+  }
+
+  String _formatTime(DateTime dt) {
+    final hh = dt.hour.toString().padLeft(2, '0');
+    final mm = dt.minute.toString().padLeft(2, '0');
+    return '$hh:$mm';
   }
 }
 
