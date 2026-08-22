@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/design/design_tokens.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/models/note_model.dart';
@@ -113,7 +114,7 @@ class SettingsPage extends ConsumerWidget {
                             ? Theme.of(context).colorScheme.primary
                             : Theme.of(context).colorScheme.outline,
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: AppSpacing.xs),
                       Text(l10n.languageFollowSystem),
                     ],
                   ),
@@ -131,7 +132,7 @@ class SettingsPage extends ConsumerWidget {
                             ? Theme.of(context).colorScheme.primary
                             : Theme.of(context).colorScheme.outline,
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: AppSpacing.xs),
                       Text(l10n.languageEnglish),
                     ],
                   ),
@@ -215,7 +216,7 @@ class SettingsPage extends ConsumerWidget {
               ),
             ),
           ),
-          const Divider(height: 32),
+          const Divider(height: AppSpacing.xxl),
 
           // ── 同步 ──
           _SectionHeader(title: l10n.syncSection),
@@ -238,7 +239,7 @@ class SettingsPage extends ConsumerWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _showEncryptionInfo(context, isEncrypted, l10n),
           ),
-          const Divider(height: 32),
+          const Divider(height: AppSpacing.xxl),
 
           // ── 数据管理 ──
           _SectionHeader(title: l10n.dataManagementSection),
@@ -282,7 +283,7 @@ class SettingsPage extends ConsumerWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _showClearConfirm(context, ref, l10n),
           ),
-          const Divider(height: 32),
+          const Divider(height: AppSpacing.xxl),
 
           // ── 性能监控 ──
           _SectionHeader(title: l10n.performanceSection),
@@ -320,7 +321,7 @@ class SettingsPage extends ConsumerWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _showLicenses(context),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: AppSpacing.xxl),
         ],
       ),
     );
@@ -349,7 +350,7 @@ class SettingsPage extends ConsumerWidget {
       ..showSnackBar(
         SnackBar(
           content: Text(l10n.themeChangedTo(_themeModeLabel(mode, l10n))),
-          duration: const Duration(seconds: 2),
+          duration: AppDurations.slow,
         ),
       );
   }
@@ -391,7 +392,7 @@ class SettingsPage extends ConsumerWidget {
       context: context,
       builder: (context) => SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(AppSpacing.lg),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -400,10 +401,10 @@ class SettingsPage extends ConsumerWidget {
                 '选择主题色',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.md),
               Wrap(
-                spacing: 16,
-                runSpacing: 16,
+                spacing: AppSpacing.md,
+                runSpacing: AppSpacing.md,
                 children: AppColors.seedColorOptions.map((option) {
                   final isSelected =
                       option.color.toARGB32() == current.toARGB32();
@@ -436,11 +437,11 @@ class SettingsPage extends ConsumerWidget {
                                   color: Colors.white, size: 24)
                               : null,
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: AppSpacing.xxs),
                         Text(
                           option.name,
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: AppFontSizes.bodySmall,
                             color: Theme.of(context)
                                 .colorScheme
                                 .onSurfaceVariant,
@@ -451,7 +452,7 @@ class SettingsPage extends ConsumerWidget {
                   );
                 }).toList(),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.md),
             ],
           ),
         ),
@@ -622,7 +623,12 @@ class _SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.md,
+        AppSpacing.md,
+        AppSpacing.xs,
+      ),
       child: Text(
         title,
         style: Theme.of(context).textTheme.labelLarge?.copyWith(

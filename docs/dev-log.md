@@ -1,5 +1,34 @@
 # 开发日志
 
+## 2026-08-23 | Week 4 Day 6 — 迁移剩余页面到 token 系统
+
+### 今日完成
+
+#### 1. 业务页 token 化收尾
+- `TagManagementPage`:标签 Chip 圆角/内边距/计数器字号全部 `AppRadius.allSm` + `AppSpacing.xs/sm` + `AppFontSizes.labelSmall`;批量操作 Snackbar 显示时长与 Card 圆角 `AppRadius.lg` 对齐
+- `TrashPage`:Card 间距/空状态图标与文字使用 token;`ListView` 底部预留与 `NotesListPage` 保持 `AppSpacing.xxl + AppSpacing.xxl + AppSpacing.xs` 一致
+- `MarkdownPreview`:行内代码背景色引用 `colorScheme.surfaceContainerHighest`;代码块圆角 `AppRadius.allMd`;表格圆角 `AppRadius.allSm`;表格 cell 内边距 `AppSpacing.sm/xs`;blockquote 内边距 `AppSpacing.md`
+- `TagFilterBar`:`FilterChip` 高度 `AppSpacing.xxxl`,padding `AppSpacing.sm/xxs`;颜色圆点直径 `AppRadius.xs * 2`;字体 `AppFontSizes.bodySmall`
+- `SettingsPage`:`SegmentedButton` 紧凑密度;`CircleAvatar` 头像/选色器尺寸与 token 对齐;`Divider(height: AppSpacing.xxl)` 替代硬编码
+- `PerformancePage`:卡片/章节标题使用 token,与 `AppTheme.cardTheme` 圆角 `AppRadius.lg` 一致
+- `NoteEditorPage`:工具栏按钮 `IconButton` 间距 `AppSpacing.xs`,预览页与编辑页用 `SwitchingView` 切换;自动保存状态指示器字号 `AppFontSizes.labelSmall`
+- `EmptyState`:图标容器尺寸/icon size/subtitle 字号 token 化
+
+#### 2. 测试覆盖
+- 新增/补全 `test/features/notes/tag_filter_bar_test.dart`、`test/features/editor/markdown_preview_test.dart`、`test/features/editor/editor_token_invariants_test.dart`、`test/features/settings/settings_page_test.dart`、`test/features/settings/performance_page_test.dart`、`test/features/notes/trash_page_test.dart`
+- 关键 token 不变式测试(关键数值与 `AppSpacing`/`AppRadius`/`AppFontSizes` 严格一致,锁定未来重构误改)
+- 修复 `trash_page_test.dart` 中缺失引号 + `GlobalMaterialLocalizations` 未 import 的问题
+- `flutter analyze` 0 issues,`flutter test` 241/241 通过(原 225 + 新增 16)
+
+#### 3. 提交与推送
+- 提交内容:`lib/features/**`、`lib/shared/widgets/empty_state.dart`、新增测试目录、`docs/dev-log.md`
+- 推送至 `Weixianyun/flutter_notes:main`(本次 commit 后)
+
+### Week 4 整体收尾
+- 设计 token + 动画系统落地,UI 一致性显著提升
+- 全部页面与 `AppTheme` 完全 token 化,后续改动只需调整 token 值
+- 测试覆盖 241 个,0 analyze 警告
+
 ## 2026-08-22 | Week 4 Day 5 — UI 细节打磨：设计 token + 动画系统
 
 提交：`26a8b42 feat(ui): design tokens + animation system + UI polish`

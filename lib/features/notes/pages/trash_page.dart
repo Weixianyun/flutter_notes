@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/design/design_tokens.dart';
 import '../../../core/router/app_router.dart';
 import '../../../data/models/note_model.dart';
 import '../../../shared/widgets/empty_state.dart';
@@ -99,16 +100,19 @@ class _TrashPageState extends ConsumerState<TrashPage> {
       children: [
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.xs,
+          ),
           color: colorScheme.surfaceContainerHighest,
           child: Row(
             children: [
               Icon(Icons.info_outline, size: 16, color: colorScheme.primary),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.xs),
               Text(
                 '${notes.length} 篇已删除笔记',
                 style: TextStyle(
-                  fontSize: 13,
+                  fontSize: AppFontSizes.bodyMedium,
                   color: colorScheme.onSurfaceVariant,
                 ),
               ),
@@ -119,7 +123,12 @@ class _TrashPageState extends ConsumerState<TrashPage> {
           child: RefreshIndicator(
             onRefresh: _loadDeletedNotes,
             child: ListView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.xs,
+                AppSpacing.md,
+                AppSpacing.md,
+              ),
               itemCount: notes.length,
               itemBuilder: (context, index) {
                 final note = notes[index];
@@ -236,12 +245,12 @@ class _TrashNoteCard extends StatelessWidget {
         : '';
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: AppSpacing.xs),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: AppRadius.allLg,
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AppSpacing.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -259,23 +268,23 @@ class _TrashNoteCard extends StatelessWidget {
                     Text(
                       '删除于 $timeStr',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: AppFontSizes.bodySmall,
                         color: colorScheme.onSurfaceVariant,
                       ),
                     ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.xs),
               Text(
                 note.excerpt,
                 style: TextStyle(
                   color: colorScheme.onSurfaceVariant,
-                  fontSize: 13,
+                  fontSize: AppFontSizes.bodyMedium,
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.sm),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [

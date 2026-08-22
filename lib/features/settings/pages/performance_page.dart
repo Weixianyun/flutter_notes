@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/design/design_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../services/performance_service.dart';
 import '../providers/performance_provider.dart';
@@ -50,7 +51,7 @@ class PerformancePage extends ConsumerWidget {
             onChanged: (v) =>
                 ref.read(performanceEnabledProvider.notifier).setEnabled(v),
           ),
-          const Divider(height: 32),
+          const Divider(height: AppSpacing.xxl),
 
           // ── 冷启动记录 ──
           _SectionHeader(title: l10n.performanceStartup),
@@ -59,7 +60,7 @@ class PerformancePage extends ConsumerWidget {
           else
             ...startups.map((m) => _StartupTile(metric: m, l10n: l10n)),
 
-          const Divider(height: 32),
+          const Divider(height: AppSpacing.xxl),
 
           // ── 滚动 FPS 记录 ──
           _SectionHeader(title: l10n.performanceScroll),
@@ -68,9 +69,9 @@ class PerformancePage extends ConsumerWidget {
           else
             ...scrolls.map((m) => _ScrollTile(metric: m, l10n: l10n)),
 
-          const SizedBox(height: 32),
+          const SizedBox(height: AppSpacing.xxl),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
             child: Text(
               l10n.performanceHint,
               style: theme.textTheme.bodySmall?.copyWith(
@@ -92,7 +93,12 @@ class _SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.xs,
+        AppSpacing.md,
+        AppSpacing.xxs,
+      ),
       child: Text(
         title,
         style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -112,7 +118,12 @@ class _EmptyHint extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.xs,
+        AppSpacing.md,
+        AppSpacing.xs,
+      ),
       child: Text(
         text,
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(

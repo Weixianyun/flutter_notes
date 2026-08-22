@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/design/design_tokens.dart';
 import '../providers/tags_provider.dart';
 
 /// 标签过滤栏
@@ -24,55 +25,67 @@ class TagFilterBar extends ConsumerWidget {
       data: (tags) {
         if (tags.isEmpty) return const SizedBox.shrink();
 
-        return Container(
-          height: 44,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            children: [
-              // 「全部」按钮
-              Padding(
-                padding: const EdgeInsets.only(right: 6, top: 6, bottom: 6),
-                child: FilterChip(
-                  label: const Text('全部'),
-                  selected: selectedTags.isEmpty,
-                  onSelected: (_) =>
-                      ref.read(selectedTagsProvider.notifier).clear(),
-                  visualDensity: VisualDensity.compact,
-                  showCheckmark: false,
-                ),
-              ),
-              // 标签列表
-              for (final tag in tags)
+        return SizedBox(
+          height: AppSpacing.xxxl,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm,
+              vertical: AppSpacing.xxs,
+            ),
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                // 「全部」按钮
                 Padding(
-                  padding:
-                      const EdgeInsets.only(right: 6, top: 6, bottom: 6),
+                  padding: const EdgeInsets.only(
+                    right: AppSpacing.xxs,
+                    top: AppSpacing.xxs,
+                    bottom: AppSpacing.xxs,
+                  ),
                   child: FilterChip(
-                    avatar: Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        color: tag.color,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    label: Text(
-                      '${tag.name} (${tag.count})',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: selectedTags.contains(tag.name)
-                            ? colorScheme.onPrimaryContainer
-                            : colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    selected: selectedTags.contains(tag.name),
+                    label: const Text('全部'),
+                    selected: selectedTags.isEmpty,
                     onSelected: (_) =>
-                        ref.read(selectedTagsProvider.notifier).toggle(tag.name),
+                        ref.read(selectedTagsProvider.notifier).clear(),
                     visualDensity: VisualDensity.compact,
                     showCheckmark: false,
                   ),
                 ),
-            ],
+                // 标签列表
+                for (final tag in tags)
+                  Padding(
+                    padding: const EdgeInsets.only(
+                      right: AppSpacing.xxs,
+                      top: AppSpacing.xxs,
+                      bottom: AppSpacing.xxs,
+                    ),
+                    child: FilterChip(
+                      avatar: Container(
+                        width: AppRadius.xs * 2,
+                        height: AppRadius.xs * 2,
+                        decoration: BoxDecoration(
+                          color: tag.color,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      label: Text(
+                        '${tag.name} (${tag.count})',
+                        style: TextStyle(
+                          fontSize: AppFontSizes.bodySmall,
+                          color: selectedTags.contains(tag.name)
+                              ? colorScheme.onPrimaryContainer
+                              : colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      selected: selectedTags.contains(tag.name),
+                      onSelected: (_) =>
+                          ref.read(selectedTagsProvider.notifier).toggle(tag.name),
+                      visualDensity: VisualDensity.compact,
+                      showCheckmark: false,
+                    ),
+                  ),
+              ],
+            ),
           ),
         );
       },

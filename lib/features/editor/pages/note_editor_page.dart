@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/design/design_tokens.dart';
 import '../../../data/models/note_model.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../services/service_providers.dart';
@@ -434,16 +435,19 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text('已导出为 Markdown 文件：'),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.xs),
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(AppSpacing.xs),
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: AppRadius.allSm,
                 ),
                 child: SelectableText(
                   filePath,
-                  style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+                  style: const TextStyle(
+                    fontSize: AppFontSizes.bodySmall,
+                    fontFamily: 'monospace',
+                  ),
                 ),
               ),
             ],
@@ -790,7 +794,7 @@ class _MarkdownToolbar extends StatelessWidget {
               ),
               autofocus: true,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.sm),
             TextField(
               controller: altController,
               decoration: const InputDecoration(

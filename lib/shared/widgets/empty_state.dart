@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/design/design_tokens.dart';
+
 /// 空状态展示组件
 ///
 /// 当列表为空或加载无数据时展示，支持自定义图标、标题和操作按钮。
@@ -26,7 +28,7 @@ class EmptyState extends StatelessWidget {
 
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(AppSpacing.xxl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -35,7 +37,7 @@ class EmptyState extends StatelessWidget {
               size: 72,
               color: colorScheme.outline.withValues(alpha: 0.5),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.md),
             Text(
               title,
               style: theme.textTheme.titleMedium?.copyWith(
@@ -44,7 +46,7 @@ class EmptyState extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             if (subtitle != null) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.xs),
               Text(
                 subtitle!,
                 style: theme.textTheme.bodyMedium?.copyWith(
@@ -54,7 +56,7 @@ class EmptyState extends StatelessWidget {
               ),
             ],
             if (actionLabel != null && onAction != null) ...[
-              const SizedBox(height: 24),
+              const SizedBox(height: AppSpacing.xl),
               FilledButton.icon(
                 onPressed: onAction,
                 icon: const Icon(Icons.add),

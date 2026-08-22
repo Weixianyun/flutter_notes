@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/design/design_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../services/tag_metadata_service.dart';
 import '../providers/tags_provider.dart';
@@ -41,22 +42,25 @@ class TagsManagementPage extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(Icons.label_outline, size: 64, color: Colors.grey),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.md),
                   Text(
                     l10n.tagManagementEmptyTitle,
                     style: const TextStyle(color: Colors.grey),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.xs),
                   Text(
                     l10n.tagManagementEmptySubtitle,
-                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    style: const TextStyle(
+                      color: Colors.grey,
+                      fontSize: AppFontSizes.bodySmall,
+                    ),
                   ),
                 ],
               ),
             );
           }
           return ListView.separated(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
             itemCount: tags.length,
             separatorBuilder: (_, _) => const Divider(height: 1),
             itemBuilder: (context, index) {
@@ -64,7 +68,7 @@ class TagsManagementPage extends ConsumerWidget {
               return ListTile(
                 leading: CircleAvatar(
                   backgroundColor: tag.color,
-                  radius: 14,
+                  radius: AppRadius.sm,
                   child: const Icon(Icons.label, color: Colors.white, size: 14),
                 ),
                 title: Text('#${tag.name}'),
@@ -97,7 +101,7 @@ class TagsManagementPage extends ConsumerWidget {
                       child: Row(
                         children: [
                           const Icon(Icons.edit_outlined),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: AppSpacing.xs),
                           Text(l10n.tagActionRename),
                         ],
                       ),
@@ -107,7 +111,7 @@ class TagsManagementPage extends ConsumerWidget {
                       child: Row(
                         children: [
                           const Icon(Icons.color_lens_outlined),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: AppSpacing.xs),
                           Text(l10n.tagActionChangeColor),
                         ],
                       ),
@@ -117,7 +121,7 @@ class TagsManagementPage extends ConsumerWidget {
                       child: Row(
                         children: [
                           const Icon(Icons.refresh),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: AppSpacing.xs),
                           Text(l10n.tagActionResetColor),
                         ],
                       ),
@@ -128,7 +132,7 @@ class TagsManagementPage extends ConsumerWidget {
                       child: Row(
                         children: [
                           const Icon(Icons.delete_outline, color: Colors.red),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: AppSpacing.xs),
                           Text(
                             l10n.tagActionDelete,
                             style: const TextStyle(color: Colors.red),
@@ -171,15 +175,15 @@ class TagsManagementPage extends ConsumerWidget {
                     ),
                     maxLength: 20,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: AppSpacing.sm),
                   Text(
                     l10n.tagColorLabel,
-                    style: const TextStyle(fontSize: 12),
+                    style: const TextStyle(fontSize: AppFontSizes.bodySmall),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.xs),
                   Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
+                    spacing: AppSpacing.xs,
+                    runSpacing: AppSpacing.xs,
                     children: TagMetadataService.presetColors.map((color) {
                       final isSelected = color == selectedColor;
                       return GestureDetector(
@@ -315,8 +319,8 @@ class TagsManagementPage extends ConsumerWidget {
             return AlertDialog(
               title: Text(l10n.tagColorDialogTitle(tagName)),
               content: Wrap(
-                spacing: 8,
-                runSpacing: 8,
+                spacing: AppSpacing.xs,
+                runSpacing: AppSpacing.xs,
                 children: TagMetadataService.presetColors.map((color) {
                   final isSelected = color == selected;
                   return GestureDetector(

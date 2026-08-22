@@ -6,6 +6,8 @@ import 'package:flutter_highlight/themes/atom-one-dark.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:markdown/markdown.dart' as md;
 
+import '../../../core/design/design_tokens.dart';
+
 /// Markdown 预览组件
 ///
 /// 使用 flutter_markdown 渲染 Markdown 内容，
@@ -44,7 +46,7 @@ class MarkdownPreview extends StatelessWidget {
         color: colorScheme.onSurface,
       ),
       p: theme.textTheme.bodyMedium?.copyWith(
-        height: 1.6,
+        height: AppLineHeights.body + 0.1,
         color: colorScheme.onSurface,
       ),
       code: theme.textTheme.bodySmall?.copyWith(
@@ -54,10 +56,15 @@ class MarkdownPreview extends StatelessWidget {
       ),
       codeblockDecoration: BoxDecoration(
         color: codeBg,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.allMd,
         border: Border.all(color: colorScheme.outlineVariant),
       ),
-      codeblockPadding: const EdgeInsets.fromLTRB(0, 8, 0, 0),
+      codeblockPadding: const EdgeInsets.fromLTRB(
+        0,
+        AppSpacing.xs,
+        0,
+        0,
+      ),
       blockquoteDecoration: BoxDecoration(
         border: Border(
           left: BorderSide(
@@ -66,21 +73,24 @@ class MarkdownPreview extends StatelessWidget {
           ),
         ),
       ),
-      blockquotePadding: const EdgeInsets.only(left: 16),
+      blockquotePadding: const EdgeInsets.only(left: AppSpacing.md),
       tableHead: theme.textTheme.bodyMedium?.copyWith(
         fontWeight: FontWeight.bold,
         color: colorScheme.onSurface,
       ),
       tableBody: theme.textTheme.bodyMedium?.copyWith(
         color: colorScheme.onSurface,
-        height: 1.5,
+        height: AppLineHeights.body,
       ),
       tableBorder: TableBorder.all(
         color: colorScheme.outlineVariant,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: AppRadius.allSm,
       ),
       tableColumnWidth: const FlexColumnWidth(),
-      tableCellsPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      tableCellsPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
       listBullet: theme.textTheme.bodyMedium?.copyWith(
         color: colorScheme.primary,
       ),
@@ -103,7 +113,7 @@ class MarkdownPreview extends StatelessWidget {
         codeFg: codeFg,
         labelColor: isDark ? const Color(0xFF6C7086) : const Color(0xFF6E7781),
         isDark: isDark,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.allMd,
       ),
     };
 
@@ -111,13 +121,13 @@ class MarkdownPreview extends StatelessWidget {
       return Markdown(
         data: data,
         styleSheet: styleSheet,
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.md),
         selectable: true,
         extensionSet: md.ExtensionSet.gitHubWeb,
         builders: builders,
         onTapLink: _onTapLink,
         checkboxBuilder: (checked) => Padding(
-          padding: const EdgeInsets.only(right: 4),
+          padding: const EdgeInsets.only(right: AppSpacing.xxs),
           child: Icon(
             checked ? Icons.check_box : Icons.check_box_outline_blank,
             size: 18,
@@ -135,7 +145,7 @@ class MarkdownPreview extends StatelessWidget {
       builders: builders,
       onTapLink: _onTapLink,
       checkboxBuilder: (checked) => Padding(
-        padding: const EdgeInsets.only(right: 4),
+        padding: const EdgeInsets.only(right: AppSpacing.xxs),
         child: Icon(
           checked ? Icons.check_box : Icons.check_box_outline_blank,
           size: 18,
@@ -232,13 +242,18 @@ class _CodeBlockWidget extends StatelessWidget {
         children: [
           if (language != null)
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.xs,
+                AppSpacing.md,
+                AppSpacing.xxs,
+              ),
               child: Row(
                 children: [
                   Text(
                     language!,
                     style: TextStyle(
-                      fontSize: 11,
+                      fontSize: AppFontSizes.labelSmall,
                       fontWeight: FontWeight.w500,
                       color: labelColor,
                       fontFamily: 'monospace',
@@ -253,11 +268,16 @@ class _CodeBlockWidget extends StatelessWidget {
             code,
             language: language ?? 'plaintext',
             theme: highlightTheme,
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.xxs,
+              AppSpacing.md,
+              AppSpacing.md,
+            ),
             textStyle: const TextStyle(
               fontFamily: 'monospace',
-              fontSize: 13,
-              height: 1.5,
+              fontSize: AppFontSizes.bodyMedium,
+              height: AppLineHeights.body,
             ),
           ),
         ],
