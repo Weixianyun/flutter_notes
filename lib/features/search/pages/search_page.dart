@@ -3,15 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
-import '../../../data/models/note_model.dart';
+import '../../../data/models/note_search_result.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../notes/widgets/note_card.dart';
 import '../providers/search_provider.dart';
+import '../utils/highlight_parser.dart';
 
 /// 搜索页面
 ///
 /// 提供全文搜索功能，支持按标题、内容、标签模糊匹配。
-/// 包含搜索历史记录和实时搜索结果展示。
+/// 包含搜索历史记录、关键词高亮预览与点击结果跳转定位。
 class SearchPage extends ConsumerStatefulWidget {
   const SearchPage({super.key});
 
@@ -28,7 +29,6 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     super.initState();
     _controller = TextEditingController();
     _focusNode = FocusNode();
-    // 自动聚焦搜索框
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNode.requestFocus();
     });
@@ -97,7 +97,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
               ),
               data: (results) => results.isEmpty
                   ? _buildNoResults()
-                  : _buildResults(results),
+                  : _buildResults(results, query),
             ),
     );
   }
@@ -120,23 +120,34 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 
   // ── 搜索结果列表 ──
 
-  Widget _buildResults(List<NoteModel> results) {
+  Widget _buildResults(List<NoteSearchResult> results, String query) {
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       itemCount: results.length,
       itemBuilder: (context, index) {
-        final note = results[index];
+        final result = results[index];
         return Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: NoteCard(
-            note: note,
-            onTap: () {
-              _onSubmit(ref.read(searchQueryProvider));
-              context.push(
-                AppRouter.editor,
-                extra: note.id,
-              );
-            },
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (result.contentSnippet != null &&
+                  result.contentSnippet!.isNotEmpty)
+                _HighlightSnippetCard(snippet: result.contentSnippet!),
+              NoteCard(
+                note: result.note,
+                onTap: () {
+                  _onSubmit(query);
+                  context.push(
+                    AppRouter.editor,
+                    extra: EditorArgs(
+                      noteId: result.note.id,
+                      highlight: query,
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
         );
       },
@@ -200,6 +211,54 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       icon: Icons.search_off,
       title: '未找到相关笔记',
       subtitle: '没有与「$query」匹配的笔记',
+    );
+  }
+}
+
+// ── 内容片段高亮预览 ──
+
+class _HighlightSnippetCard extends StatelessWidget {
+  const _HighlightSnippetCard({required this.snippet});
+
+  final String snippet;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final segments = parseHighlight(snippet);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerLow,
+        border: Border(
+          left: BorderSide(color: colorScheme.primary, width: 3),
+        ),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: RichText(
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        text: TextSpan(
+          children: segments.map((s) {
+            return TextSpan(
+              text: s.text,
+              style: s.isHighlight
+                  ? textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.primary,
+                      fontWeight: FontWeight.w700,
+                      backgroundColor:
+                          colorScheme.primaryContainer.withValues(alpha: 0.5),
+                    )
+                  : textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+            );
+          }).toList(),
+        ),
+      ),
     );
   }
 }

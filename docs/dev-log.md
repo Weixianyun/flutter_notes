@@ -1,5 +1,106 @@
 # 开发日志
 
+## 2026-08-22 | Week 4 Day 1 — 全文搜索高亮 + 跳转定位
+
+### 今日完成
+
+#### 1. 数据库层已具备 FTS5 基础
+- 上一阶段已实现 `notes_fts` 虚拟表、INSERT/UPDATE/DELETE 触发器、`_populateFts()` 回填
+- `DriftNoteRepository.searchNotes()` 已用 `MATCH` 查询
+- 升级方向：在 SQL 中追加 `highlight()` + `snippet()`，让数据库直接返回带 `<<` `>>` 标记的片段
+
+#### 2. 仓库层：`searchNotesWithHighlights`
+- 新增接口 `Future<List<NoteSearchResult>> searchNotesWithHighlights(String query, {int contentTokenCount = 16})`
+- `DriftNoteRepository`：
+  - SQL 追加 `highlight(notes_fts, 1, '<<', '>>') AS title_snip` 与 `snippet(notes_fts, 2, '<<', '>>', '...', 16) AS content_snip`
+  - `ORDER BY rank, n.updated_at DESC`（rank 是 FTS5 内置相关度评分）
+  - `searchNotes()` 改为薄包装，复用新方法
+- `MockNoteRepository`：使用 `_wrapHighlights` 用 `<<` `>>` 包裹命中片段，保持测试无 SQLite 依赖
+- 抽象接口、`DriftNoteRepository`、`MockNoteRepository` 三处同步
+
+#### 3. 模型：`NoteSearchResult`
+- 新建 `lib/data/models/note_search_result.dart`
+- 字段：`note` / `titleSnippet` / `contentSnippet`，`hasHighlight` 便捷判断
+- `toJson()` 用于日志与测试
+
+#### 4. Provider 层
+- `searchResultsProvider` 改返回 `List<NoteSearchResult>`
+- 新增 `searchHighlightTokenProvider`：仅暴露当前搜索 token（去掉前后空格），供编辑器读取
+
+#### 5. 高亮片段解析工具
+- 新建 `lib/features/search/utils/highlight_parser.dart`
+- 纯函数 `parseHighlight(String?, {startMark, endMark})` → `List<HighlightSegment>`
+- 边界处理：
+  - `<<` 存在但 `>>` 缺失 → 整段视为高亮（兜底）
+  - `<<>>` 空匹配也正常输出
+  - 自定义 `startMark` / `endMark` 兼容未来调整
+
+#### 6. 路由层：`EditorArgs`
+- 新增 `class EditorArgs { noteId, highlight }`
+- `/editor` 路由 builder 判断 `extra` 类型：
+  - `EditorArgs` → 同时传递 `noteId` 与 `highlight`
+  - `String?` → 兼容旧的"笔记 ID"形式（笔记列表、图谱跳转不受影响）
+- 调用方：`context.push(AppRouter.editor, extra: EditorArgs(noteId: ..., highlight: ...))`
+
+#### 7. 编辑器：进入后自动选中关键词
+- `NoteEditorPage` 新增 `final String? highlight` 构造参数
+- `_loadNote` 完成后调用 `_applyHighlightIfNeeded()`
+- `_findFirstMatch`：先在标题找，没有再在内容找，`TextSelection(baseOffset, extentOffset)` 选中匹配区间
+- 使用 `addPostFrameCallback` 延迟到首帧后设置 selection，避免与 TextField 初始化竞态
+
+#### 8. 搜索页 UI
+- 保留原 `NoteCard` 渲染以保持可发现性
+- 在每条结果上方插入 `_HighlightSnippetCard`：左侧 3px 主题色边条、背景 `surfaceContainerLow`、高亮片段用 `RichText` 渲染（关键词 `primary` + 半透明 `primaryContainer` 背景）
+- 高亮不命中时不显示片段卡，避免视觉噪音
+- 点击 `NoteCard` 携带 `EditorArgs(noteId, highlight: query)` 跳转
+
+#### 9. 测试
+- 新建 `test/features/search/highlight_parser_test.dart`（9 用例）：
+  - null / 空串 / 普通文本无高亮 / 单次高亮 / 多次高亮 / 缺 `>>` 兜底 / 空匹配 / 自定义标记
+- 新建 `test/repositories/search_highlights_test.dart`（7 用例）：
+  - 空 query 不返回 / 标题命中包裹 / 内容命中包裹 / 不匹配时 snippets 为 null
+  - `searchNotes` 与 `searchNotesWithHighlights` 笔记集合一致
+  - 大小写不敏感但保留原文大小写
+  - 软删除笔记被排除
+- `test/widget_test.dart` 新增 2 个集成测试：
+  - `Search results show highlight snippet above each card`：搜 "Dart" 仍能找到 "Dart 3 空安全实践"，且 `RichText` 渲染高亮片段
+  - `Tapping search result navigates to editor with highlight token`：点击跳转后编辑器工具栏可见
+- 关键兼容修复：保留 `NoteCard` 渲染，否则 `find.text('Dart 3 空安全实践')` 会因 `RichText` 而失败
+
+### 验证结果
+- `flutter analyze`: No issues found! (ran in 6.1s)
+- `flutter test`: All tests passed! (166 tests，含原 148 + 18 项 Day 6 新增)
+
+### 遇到的问题及解决
+
+#### 问题 1: 旧 `Search filters notes by query` 集成测试失败
+- **现象**：`find.text('Dart 3 空安全实践')` 找不到
+- **原因**：第一版我把搜索结果完全替换为自定义 `_SearchResultCard`（标题用 `RichText` 渲染），破坏了现有测试的 `Text` finder
+- **解决**：保留 `NoteCard` 渲染（标题仍为 `Text`），高亮片段单独作为附属卡放在 `NoteCard` 上方
+
+#### 问题 2: 仓库单测"multi-occurrence"用例选错关键词
+- **现象**：用 "FTS5" 搜不到（mock 种子数据无此词）
+- **原因**：测试断言 hard-coded 一个不存在的关键词
+- **解决**：改用 mock 数据中真实存在的"主题"，断言更稳健
+
+#### 问题 3: `Icons.check` 计数不准确
+- **现象**：新集成测试 `Icons.check` 找到 2 个而非 1 个
+- **原因**：编辑器 AppBar 也有 `check` 图标，跳转后多个 icon 重叠
+- **解决**：改用 `find.byIcon(Icons.code)`（编辑工具栏的行内代码图标，搜索页不会存在）
+
+### 技术决策
+- **数据库返回片段而非应用层拼接**：FTS5 `highlight()` / `snippet()` 性能远高于应用层 `String.indexOf` 循环，且自带相关度排序
+- **保留 `NoteCard` 渲染**：避免破坏现有 `find.text` 测试；高亮作为附属片段呈现而非替换
+- **`EditorArgs` 兼容旧 `String?`**：路由 builder 用 `if (extra is EditorArgs)` 分支处理，笔记列表 / 图谱等老调用点零修改
+- **`<<` `>>` 标记 vs `<mark>` HTML**：数据库层不渲染 HTML，避免 Markdown 预览与文本搜索产生交叉污染；解析端只拆分纯文本片段
+- **延迟一帧设置 selection**：`addPostFrameCallback` 避免与 `TextField` 初始化竞态
+- **Mock 仓库同步实现高亮**：测试不依赖 SQLite 内存库，但保持 `searchNotes` / `searchNotesWithHighlights` 行为一致
+
+### Git 提交记录
+`待提交`
+
+---
+
 ## 2026-08-22 | Week 3 Day 5（续）— 性能监控（启动时间 + 滚动 FPS）
 
 ### 今日完成

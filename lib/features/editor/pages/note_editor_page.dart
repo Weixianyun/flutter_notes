@@ -24,10 +24,13 @@ import '../widgets/markdown_preview.dart';
 /// 过渡：`idle` → `saving` → `saved(timestamp)`。保存失败显示 `error` 状态。
 /// AppBar 底部展示字数、字符数和保存状态指示器。
 class NoteEditorPage extends ConsumerStatefulWidget {
-  const NoteEditorPage({super.key, this.noteId});
+  const NoteEditorPage({super.key, this.noteId, this.highlight});
 
   /// 编辑已有笔记时传入 ID，新建时不传
   final String? noteId;
+
+  /// 进入后需要高亮并选中的关键词（来自搜索跳转）
+  final String? highlight;
 
   @override
   ConsumerState<NoteEditorPage> createState() => _NoteEditorPageState();
@@ -91,9 +94,42 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
         _tags = List.from(note.tags);
         _isLoading = false;
       });
+      _applyHighlightIfNeeded();
     } else if (mounted) {
       setState(() => _isLoading = false);
     }
+  }
+
+  /// 若携带 [widget.highlight],在笔记内容中定位第一处匹配并选中
+  void _applyHighlightIfNeeded() {
+    final token = widget.highlight?.trim();
+    if (token == null || token.isEmpty) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final hit = _findFirstMatch(_titleController.text, token) ??
+          _findFirstMatch(_contentController.text, token);
+      if (hit == null) return;
+      if (hit.inTitle) {
+        _titleController.selection = TextSelection(
+          baseOffset: hit.start,
+          extentOffset: hit.end,
+        );
+      } else {
+        _contentController.selection = TextSelection(
+          baseOffset: hit.start,
+          extentOffset: hit.end,
+        );
+      }
+    });
+  }
+
+  _HighlightHit? _findFirstMatch(String text, String token) {
+    if (text.isEmpty || token.isEmpty) return null;
+    final lower = text.toLowerCase();
+    final lowerToken = token.toLowerCase();
+    final idx = lower.indexOf(lowerToken);
+    if (idx < 0) return null;
+    return _HighlightHit(idx, idx + token.length, text == _titleController.text);
   }
 
   @override
@@ -813,4 +849,12 @@ class _ToolButton extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 内部辅助：标识一次匹配的位置
+class _HighlightHit {
+  const _HighlightHit(this.start, this.end, this.inTitle);
+  final int start;
+  final int end;
+  final bool inTitle;
 }

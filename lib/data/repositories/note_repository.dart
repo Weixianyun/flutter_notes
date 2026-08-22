@@ -4,6 +4,7 @@ import 'package:drift/drift.dart';
 
 import '../database/app_database.dart';
 import '../models/note_model.dart';
+import '../models/note_search_result.dart';
 
 /// 笔记数据仓库抽象接口
 ///
@@ -39,6 +40,16 @@ abstract class NoteRepository {
 
   /// 全文搜索笔记（FTS5）
   Future<List<NoteModel>> searchNotes(String query);
+
+  /// 全文搜索笔记并返回高亮片段（FTS5 highlight + snippet）
+  ///
+  /// 默认高亮标记：`<<` + `>>`，默认内容片段 token 数 16。
+  /// 返回的 [NoteSearchResult.titleSnippet] / [contentSnippet] 包含
+  /// FTS5 高亮标记，调用方可使用 [parseHighlight] 拆分为可渲染片段。
+  Future<List<NoteSearchResult>> searchNotesWithHighlights(
+    String query, {
+    int contentTokenCount = 16,
+  });
 
   /// 监听全部未删除笔记变化（按更新时间倒序）
   Stream<List<NoteModel>> watchAllNotes();
@@ -155,22 +166,42 @@ class DriftNoteRepository implements NoteRepository {
 
   @override
   Future<List<NoteModel>> searchNotes(String query) async {
+    final results = await searchNotesWithHighlights(query);
+    return results.map((r) => r.note).toList();
+  }
+
+  @override
+  Future<List<NoteSearchResult>> searchNotesWithHighlights(
+    String query, {
+    int contentTokenCount = 16,
+  }) async {
     final trimmed = query.trim();
     if (trimmed.isEmpty) return [];
 
     final ftsQuery = _buildFtsQuery(trimmed);
 
     final results = await _db.customSelect(
-      'SELECT n.* FROM notes n '
+      'SELECT n.*, '
+      'highlight(notes_fts, 1, ?, ?) AS title_snip, '
+      'snippet(notes_fts, 2, ?, ?, ?, ?) AS content_snip '
+      'FROM notes n '
       'JOIN notes_fts f ON n.id = f.note_id '
       'WHERE notes_fts MATCH ? AND n.deleted_at IS NULL '
-      'ORDER BY n.updated_at DESC',
-      variables: [Variable.withString(ftsQuery)],
+      'ORDER BY rank, n.updated_at DESC',
+      variables: [
+        Variable.withString(_highlightStart),
+        Variable.withString(_highlightEnd),
+        Variable.withString(_highlightStart),
+        Variable.withString(_highlightEnd),
+        Variable.withString('...'),
+        Variable.withInt(contentTokenCount),
+        Variable.withString(ftsQuery),
+      ],
       readsFrom: {_db.notes},
     ).get();
 
     return results.map((row) {
-      return NoteModel(
+      final note = NoteModel(
         id: row.read<String>('id'),
         title: row.read<String>('title'),
         content: row.read<String>('content'),
@@ -189,8 +220,17 @@ class DriftNoteRepository implements NoteRepository {
         updatedAt: row.read<DateTime>('updated_at'),
         deletedAt: row.readNullable<DateTime>('deleted_at'),
       );
+      return NoteSearchResult(
+        note: note,
+        titleSnippet: row.readNullable<String>('title_snip'),
+        contentSnippet: row.readNullable<String>('content_snip'),
+      );
     }).toList();
   }
+
+  /// FTS5 高亮起始标记
+  static const _highlightStart = '<<';
+  static const _highlightEnd = '>>';
 
   /// 构建 FTS5 查询字符串
   ///
@@ -353,14 +393,53 @@ class MockNoteRepository implements NoteRepository {
 
   @override
   Future<List<NoteModel>> searchNotes(String query) async {
+    final results = await searchNotesWithHighlights(query);
+    return results.map((r) => r.note).toList();
+  }
+
+  @override
+  Future<List<NoteSearchResult>> searchNotesWithHighlights(
+    String query, {
+    int contentTokenCount = 16,
+  }) async {
     final q = query.trim().toLowerCase();
     if (q.isEmpty) return [];
-    return _notes.where((n) {
+    final matched = _notes.where((n) {
       if (n.deletedAt != null) return false;
       return n.title.toLowerCase().contains(q) ||
           n.content.toLowerCase().contains(q) ||
           n.tags.any((t) => t.toLowerCase().contains(q));
     }).toList();
+    return matched.map((note) {
+      return NoteSearchResult(
+        note: note,
+        titleSnippet: _wrapHighlights(note.title, q),
+        contentSnippet: _wrapHighlights(note.content, q),
+      );
+    }).toList();
+  }
+
+  /// Mock 端的高亮包装：用 `<<` `>>` 包裹所有大小写不敏感匹配的关键词
+  String? _wrapHighlights(String text, String lowerQuery) {
+    if (text.isEmpty || lowerQuery.isEmpty) return null;
+    final lower = text.toLowerCase();
+    final buf = StringBuffer();
+    var i = 0;
+    var matched = false;
+    while (i < text.length) {
+      final hit = lower.indexOf(lowerQuery, i);
+      if (hit < 0) {
+        buf.write(text.substring(i));
+        break;
+      }
+      buf.write(text.substring(i, hit));
+      buf.write('<<');
+      buf.write(text.substring(hit, hit + lowerQuery.length));
+      buf.write('>>');
+      i = hit + lowerQuery.length;
+      matched = true;
+    }
+    return matched ? buf.toString() : null;
   }
 
   @override

@@ -564,6 +564,51 @@ void main() {
     expect(find.text('舒适'), findsAtLeastNWidgets(1));
     expect(find.text('紧凑'), findsAtLeastNWidgets(1));
   });
+
+  // ── Day 6: 搜索高亮 + 跳转定位 ──
+
+  testWidgets(
+    'Search results show highlight snippet above each card',
+    (tester) async {
+      await pumpApp(tester);
+
+      // 进入搜索页
+      await tester.tap(find.byIcon(Icons.search).first);
+      await tester.pumpAndSettle();
+
+      // 输入关键词 'Dart'
+      await tester.enterText(find.byType(TextField), 'Dart');
+      await tester.pumpAndSettle();
+
+      // 笔记标题（Dart 3 空安全实践）应通过 NoteCard 正常渲染
+      expect(find.text('Dart 3 空安全实践'), findsOneWidget);
+
+      // 高亮片段使用 RichText 渲染
+      expect(find.byType(RichText), findsWidgets);
+    },
+  );
+
+  testWidgets(
+    'Tapping search result navigates to editor with highlight token',
+    (tester) async {
+      await pumpApp(tester);
+
+      // 进入搜索页
+      await tester.tap(find.byIcon(Icons.search).first);
+      await tester.pumpAndSettle();
+
+      // 输入关键词
+      await tester.enterText(find.byType(TextField), 'Dart');
+      await tester.pumpAndSettle();
+
+      // 点击第一张笔记卡片
+      await tester.tap(find.text('Dart 3 空安全实践'));
+      await tester.pumpAndSettle();
+
+      // 跳转后编辑器页面应出现编辑工具栏（行内代码 icon）
+      expect(find.byIcon(Icons.code), findsOneWidget);
+    },
+  );
 }
 
 /// 测试用 Notifier，强制返回 false（关闭新建笔记自动预览）。

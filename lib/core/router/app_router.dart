@@ -48,9 +48,17 @@ class AppRouter {
           ),
           GoRoute(
             path: editor,
-            builder: (context, state) => NoteEditorPage(
-              noteId: state.extra as String?,
-            ),
+            builder: (context, state) {
+              final extra = state.extra;
+              if (extra is EditorArgs) {
+                return NoteEditorPage(
+                  noteId: extra.noteId,
+                  highlight: extra.highlight,
+                );
+              }
+              // 兼容旧的 String? 形式（笔记列表 / 图谱直接跳转）
+              return NoteEditorPage(noteId: extra as String?);
+            },
           ),
           GoRoute(
             path: search,
@@ -91,4 +99,14 @@ class AppRouter {
               child: Text('404: ${state.error?.message ?? "Unknown route"}')),
         ),
       );
+}
+
+/// 跳转到编辑器时使用的参数包
+///
+/// - [noteId]: 笔记 ID，新建场景为 null
+/// - [highlight]: 进入后要选中的关键词（来自搜索结果，可选）
+class EditorArgs {
+  const EditorArgs({this.noteId, this.highlight});
+  final String? noteId;
+  final String? highlight;
 }
