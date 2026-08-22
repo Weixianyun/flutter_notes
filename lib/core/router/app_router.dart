@@ -7,10 +7,12 @@ import '../../features/notes/pages/notes_list_page.dart';
 import '../../features/notes/pages/tag_management_page.dart';
 import '../../features/notes/pages/trash_page.dart';
 import '../../features/search/pages/search_page.dart';
+import '../../features/settings/pages/developer_options_page.dart';
 import '../../features/settings/pages/performance_page.dart';
 import '../../features/settings/pages/settings_page.dart';
 import '../../features/sync/pages/github_login_page.dart';
 import '../../features/sync/pages/sync_settings_page.dart';
+import '../design/app_page_transitions.dart';
 
 /// 应用路由配置
 ///
@@ -30,6 +32,7 @@ class AppRouter {
   static const String trash = '/trash';
   static const String tagManagement = '/tags';
   static const String performance = '/performance';
+  static const String developerOptions = '/developer-options';
 
   /// 构建 GoRouter 配置
   static GoRouter get router => _router;
@@ -48,16 +51,22 @@ class AppRouter {
           ),
           GoRoute(
             path: editor,
-            builder: (context, state) {
+            pageBuilder: (context, state) {
               final extra = state.extra;
+              Widget child;
               if (extra is EditorArgs) {
-                return NoteEditorPage(
+                child = NoteEditorPage(
                   noteId: extra.noteId,
                   highlight: extra.highlight,
                 );
+              } else {
+                // 兼容旧的 String? 形式（笔记列表 / 图谱直接跳转）
+                child = NoteEditorPage(noteId: extra as String?);
               }
-              // 兼容旧的 String? 形式（笔记列表 / 图谱直接跳转）
-              return NoteEditorPage(noteId: extra as String?);
+              return AppPageTransitions.sharedAxisPage(
+                key: state.pageKey,
+                child: child,
+              );
             },
           ),
           GoRoute(
@@ -91,6 +100,10 @@ class AppRouter {
           GoRoute(
             path: performance,
             builder: (context, state) => const PerformancePage(),
+          ),
+          GoRoute(
+            path: developerOptions,
+            builder: (context, state) => const DeveloperOptionsPage(),
           ),
         ],
         errorBuilder: (context, state) => Scaffold(

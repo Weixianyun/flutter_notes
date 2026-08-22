@@ -75,6 +75,38 @@ class AppAnimations {
       child: child,
     );
   }
+
+  /// 笔记共享 Hero tag
+  ///
+  /// 列表卡片 → 编辑器页之间的共享元素转场，
+  /// 使用稳定的 noteId 派生 tag，避免引入额外状态。
+  static Object noteHeroTag(String noteId) => 'note-card-$noteId';
+
+  /// 笔记共享 Hero 包装
+  ///
+  /// 把任意 [child] 包裹到 [Hero] 中，tag 由 [noteId] 派生。
+  /// 在源（笔记卡片）与目标（编辑器）页面同时使用即可启用共享转场。
+  static Widget noteHero({required String noteId, required Widget child}) {
+    return Hero(
+      tag: noteHeroTag(noteId),
+      // Material elevation ramp：起止端阴影同步过渡更自然
+      createRectTween: (begin, end) => MaterialRectArcTween(
+        begin: begin,
+        end: end,
+      ),
+      flightShuttleBuilder: (
+        flightContext,
+        animation,
+        flightDirection,
+        fromHeroContext,
+        toHeroContext,
+      ) {
+        // 飞行途中使用目标页的 hero 渲染
+        return toHeroContext.widget as Hero;
+      },
+      child: child,
+    );
+  }
 }
 
 /// 三态切换视图（loading / empty / content）

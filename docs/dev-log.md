@@ -1,5 +1,46 @@
 # 开发日志
 
+## 2026-08-23 | Week 5 Day 2-4 — 动画系统延伸：Hero + Page transition + 开发者选项
+
+### 今日完成
+
+#### 1. Hero 共享元素动画 (`lib/core/design/app_animations.dart`)
+- `AppAnimations.noteHeroTag(noteId)`:派生出 `note-card-{id}` 形式的稳定 Hero tag
+- `AppAnimations.noteHero(noteId, child)`:把任意子组件包成 Hero,使用 `MaterialRectArcTween` 实现弧形飞行轨迹,`flightShuttleBuilder` 让飞行途中渲染目标页 hero
+- `NoteCard` 整张卡用 `noteHero` 包裹(外层 `Material(transparency)` 解决 Card 阴影撕裂)
+- 编辑器 AppBar 标题在 `isEditing + noteId != null` 时也对端包同 tag Hero,实现「卡片 → 编辑器标题」共享元素转场
+
+#### 2. 自定义页面转场 (`lib/core/design/app_page_transitions.dart`)
+- `fadeUp(child)`:从底部 16dp 向上淡入(280ms,easeOut)
+- `zoom(child)`:从 0.92 缩放 + 淡入(280ms)
+- `sharedAxis(child)`:淡入 + 横向 5% 位移,适合配合 Hero 使用
+- `sharedAxisPage(key, child)`:go_router 的 `CustomTransitionPage` 工厂,让单个路由独立使用非默认转场
+- 路由接入:`editor` 路由改用 `pageBuilder + sharedAxisPage`,与 Hero 形成 Material 3 风格 Shared Axis 转场
+
+#### 3. 开发者选项页面 (`lib/features/settings/pages/developer_options_page.dart`)
+- 在设置页「关于」区增加入口
+- 展示 5 个 token 组的运行时值(AppSpacing / AppRadius / AppDurations / AppLineHeights / AppFontSizes)
+- 点击 token 行复制 `name = value` 到剪贴板 + SnackBar 提示
+- 路由常量 `AppRouter.developerOptions = '/developer-options'`
+- 所有 token 数值与 `design_tokens.dart` 严格同步(测试断言锁定)
+
+#### 4. 测试覆盖
+- `test/design/app_animations_hero_test.dart`(8 个):tag 派生规则、Hero 渲染、ArcTween 配置、shuttleBuilder 挂载、多 hero tag 独立
+- `test/design/app_page_transitions_test.dart`(6 个):fadeUp/zoom/sharedAxis 三种 PageRouteBuilder 默认时长、自定义 duration、go_router `CustomTransitionPage` 集成
+- `test/features/settings/developer_options_page_test.dart`(6 个):5 个 token group 渲染、点击复制 SnackBar、token 与 `design_tokens` 同步
+- 全量 261 测试通过(原 241 + 新增 20),`flutter analyze` 0 issues
+
+#### 5. 提交与推送
+- 提交内容:`lib/core/design/{app_animations,app_page_transitions}.dart`、`lib/core/router/app_router.dart`、`lib/features/editor/pages/note_editor_page.dart`、`lib/features/notes/widgets/note_card.dart`、`lib/features/settings/pages/{developer_options_page,settings_page}.dart`、3 个新测试文件、`docs/dev-log.md`
+- 推送至 `Weixianyun/flutter_notes:main`(本次 commit 后)
+
+### Week 5 整体收尾
+- 主题切换:已通过 `AnimatedTheme` 包裹实现平滑过渡(Day 5)
+- Hero 共享元素:NoteCard → Editor 共享转场
+- Page transition:三档自定义转场(fadeUp / zoom / sharedAxis)+ editor 路由接入
+- 开发者选项:运行时查看设计 token,加速设计/开发协作
+- 测试覆盖 261 个,0 analyze 警告
+
 ## 2026-08-23 | Week 4 Day 6 — 迁移剩余页面到 token 系统
 
 ### 今日完成

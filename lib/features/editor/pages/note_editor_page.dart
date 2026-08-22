@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/design/app_animations.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../data/models/note_model.dart';
 import '../../../l10n/app_localizations.dart';
@@ -220,7 +221,17 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Text(_isEditing ? l10n.editorTitleEdit : l10n.editorTitleNew),
+          title: _isEditing && widget.noteId != null
+              ? AppAnimations.noteHero(
+                  noteId: widget.noteId!,
+                  child: Material(
+                    type: MaterialType.transparency,
+                    child: Text(
+                      _isEditing ? l10n.editorTitleEdit : l10n.editorTitleNew,
+                    ),
+                  ),
+                )
+              : Text(_isEditing ? l10n.editorTitleEdit : l10n.editorTitleNew),
           actions: [
             IconButton(
               icon: Icon(effectivePreview ? Icons.edit : Icons.preview),

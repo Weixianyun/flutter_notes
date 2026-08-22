@@ -309,6 +309,13 @@ class SettingsPage extends ConsumerWidget {
             ),
           ),
           ListTile(
+            leading: const Icon(Icons.developer_mode_outlined),
+            title: const Text('开发者选项'),
+            subtitle: const Text('设计 token 速查'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(AppRouter.developerOptions),
+          ),
+          ListTile(
             leading: const Icon(Icons.code),
             title: Text(l10n.githubRepo),
             subtitle: const Text(githubRepoUrl),

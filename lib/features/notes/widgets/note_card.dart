@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/design/app_animations.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/models/note_model.dart';
@@ -39,7 +40,11 @@ class NoteCard extends ConsumerWidget {
     final tagMetadata = ref.watch(tagMetadataServiceProvider);
     final padding = compact ? AppSpacing.xs + 2 : AppSpacing.md;
 
-    return Card(
+    return AppAnimations.noteHero(
+      noteId: note.id,
+      child: Material(
+        type: MaterialType.transparency,
+        child: Card(
       color: isSelected ? colorScheme.primaryContainer : null,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -134,6 +139,8 @@ class NoteCard extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+      ),
       ),
     );
   }
