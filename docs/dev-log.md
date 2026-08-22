@@ -1,5 +1,67 @@
 # 开发日志
 
+## 2026-08-22 | Week 4 Day 5 — UI 细节打磨：设计 token + 动画系统
+
+提交：`26a8b42 feat(ui): design tokens + animation system + UI polish`
+
+### 今日完成
+
+#### 1. 集中设计 token(`lib/core/design/design_tokens.dart`)
+- `AppSpacing`(9 档,8 倍数阶梯):xxs=4, xs=8, sm=12, md=16, lg=20, xl=24, xxl=32, xxxl=48, huge=64
+- `AppRadius`(5 档,与 Material 3 默认对齐):xs=4, sm=8, md=12, lg=16, xl=28;附带 `allXs/allSm/allMd/allLg/allXl` 便捷 `BorderRadius` 访问器
+- `AppDurations`(4 档,Material 3 motion):fast=150ms, medium=280ms, slow=400ms, stagger=420ms
+- `AppCurves`:emphasized / easeOut / easeIn 三条 Cubic
+- `AppLineHeights`:display 1.2 / title 1.25 / body 1.5 / label 1.4 —— 针对中英文混排优化行高
+- `AppFontSizes`:15 档字号阶梯,严格遵循 Material 3 typography
+- `withLineHeight()`:TextStyle 行高叠加工具
+
+#### 2. 动画系统(`lib/core/design/app_animations.dart`)
+- `AppAnimations.listItem(index, child)`:列表项错位淡入+上移(stagger 30ms/item)
+- `AppAnimations.iconSwap(icon)`:两个图标间 Scale + Fade 切换
+- `AppAnimations.pressable(onTap, child)`:按下 0.96 缩放反馈(AnimatedScale)
+- `SwitchingView(isLoading, isEmpty, loading, empty, content)`:三态 loading/empty/content 之间 280ms 淡入淡出(loading 优先于 empty)
+- 全部 5 个公开 Widget 通过 `const` 友好,可零成本内联
+
+#### 3. `AppTheme` 全面接入 token
+- `TextTheme` 字号+行高全部读 `AppFontSizes` / `AppLineHeights`(display 1.2, title 1.25, body 1.5, label 1.4)
+- 组件 theme 圆角统一读 `AppRadius.lg/md/sm/xl`(Card=lg, ListTile=md, Input=md, SnackBar=md, Dialog=lg, Chip=sm, FAB=xl)
+- ListTile 水平内边距 = `AppSpacing.md`,FAB/Input 圆角与 Material 3 规范一致
+- AppBar / NavigationBar / BottomSheet / Tooltip / Divider / ProgressIndicator 全部 token 化
+- AMOLED 主题保留独立的 surface 黑色阶梯(#000000 / #050505 / #0A0A0A / #121212 / #1A1A1A)
+- `pageTransitionsTheme` 引入 `PredictiveBackPageTransitionsBuilder`(Android)与 `CupertinoPageTransitionsBuilder`(iOS/macOS)
+
+#### 4. 业务页应用 token
+- `NotesListPage`:
+  - 用 `SwitchingView` 替换手写的 loading/empty/content 三态切换
+  - 列表底部预留空间用 `AppSpacing.xxl + AppSpacing.xxl + AppSpacing.xs` 表达
+  - 列表 `cacheExtent`(已 deprecated)移除,使用默认 scroll 缓存
+  - 移除 `_buildErrorState` 死代码
+- `NoteCard`:
+  - 紧凑模式 padding = `AppSpacing.xs + 2`,标准模式 = `AppSpacing.md`
+  - 复选框 `AnimatedSwitcher` 切换 radio_button_unchecked ↔ check_circle(150ms, scale + fade)
+  - 标题/摘要/标签间距统一为 `AppSpacing.xs/sm`
+- `SearchPage`:搜索框/结果项使用 token 圆角与内边距
+
+#### 5. 测试覆盖(77 个新测试)
+- `test/design/design_tokens_test.dart`(24 个):间距/圆角/时长/曲线/行高/字号阶梯不变式 + `withLineHeight` 不变性
+- `test/design/app_animations_test.dart`(10 个):
+  - `SwitchingView`:4 种状态切换(loading/empty/content/loading>empty)+ AnimatedSwitcher 跨态过渡
+  - `listItem`:多 index 并存渲染、index=0 立即可见
+  - `iconSwap`:图标渲染 + 切换后旧图标消失
+  - `pressable`:无 onTap、有点击回调、AnimatedScale 包装存在
+- `test/theme/app_theme_tokens_test.dart`(12 个):TextTheme 字号/行高挂载正确,三套主题字号一致但颜色不同,所有组件 theme 圆角 + 内边距与 `AppRadius`/`AppSpacing` 严格对应,AMOLED surface 黑色阶梯
+- 全量 225 测试通过(原 148 + 新增 77),`flutter analyze` 0 issues
+
+#### 6. 提交与推送
+- `git commit`:9 files changed, +1128 −80
+- `git push origin main`:`Weixianyun/flutter_notes` 7b60afe → 26a8b42
+
+### 待办(Week 4 Day 6 候选)
+- 迁移其它页面(标签管理、回收站、图谱)到 token 系统
+- 引入 Light/Dark 切换时的 `AnimatedTheme` 包裹,让所有色变平滑过渡
+- 在 `app_animations.dart` 增加 hero 与 page transition 工具
+- 把 token 暴露给 runtime(开发者选项中查看当前主题常量)
+
 ## 2026-08-22 | Week 4 Day 4 — AMOLED 真黑 + 主题切换动画 + 反馈
 
 ### 今日完成
