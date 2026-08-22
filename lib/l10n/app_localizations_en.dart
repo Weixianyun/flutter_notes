@@ -33,6 +33,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get themeModeSystem => 'System';
 
   @override
+  String get themeModeAmoled => 'AMOLED black';
+
+  @override
+  String get themeModeAmoledSubtitle =>
+      'True black background for OLED screens';
+
+  @override
+  String themeChangedTo(String mode) {
+    return 'Theme switched to $mode';
+  }
+
+  @override
   String get seedColorLabel => 'Seed color';
 
   @override

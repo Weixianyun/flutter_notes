@@ -186,7 +186,7 @@ void main() {
     expect(find.text('设置'), findsOneWidget);
     // 应有主题模式选择器
     expect(find.text('主题模式'), findsOneWidget);
-    expect(find.byType(SegmentedButton<ThemeMode>), findsOneWidget);
+    expect(find.byType(SegmentedButton<AppThemeMode>), findsOneWidget);
     // 滚动到加密设置项
     await tester.scrollUntilVisible(find.text('加密设置'), 150);
     expect(find.text('加密设置'), findsOneWidget);
@@ -194,6 +194,33 @@ void main() {
     // 继续滚动到底部，应有版本信息
     await tester.scrollUntilVisible(find.text('版本'), 150);
     expect(find.text('版本'), findsOneWidget);
+  });
+
+  // ── Day 4: 主题切换反馈 ──
+
+  testWidgets('Toggling AMOLED switch shows theme-changed snack bar',
+      (tester) async {
+    await pumpApp(tester);
+
+    // 进入设置页
+    await tester.tap(find.byIcon(Icons.more_vert));
+    await tester.pumpAndSettle();
+
+    // 找到 AMOLED 真黑 ListTile 的 Switch 并点击
+    final amoledSwitch = find.descendant(
+      of: find.ancestor(
+        of: find.text('AMOLED 真黑'),
+        matching: find.byType(ListTile),
+      ),
+      matching: find.byType(Switch),
+    );
+    expect(amoledSwitch, findsOneWidget);
+    await tester.tap(amoledSwitch);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    // SnackBar 应显示 "已切换到 AMOLED 真黑 主题"
+    expect(find.textContaining('AMOLED 真黑'), findsWidgets);
   });
 
   // ── go_router 路由测试 ──

@@ -146,6 +146,24 @@ abstract class AppLocalizations {
   /// **'System'**
   String get themeModeSystem;
 
+  /// No description provided for @themeModeAmoled.
+  ///
+  /// In en, this message translates to:
+  /// **'AMOLED black'**
+  String get themeModeAmoled;
+
+  /// No description provided for @themeModeAmoledSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'True black background for OLED screens'**
+  String get themeModeAmoledSubtitle;
+
+  /// No description provided for @themeChangedTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme switched to {mode}'**
+  String themeChangedTo(String mode);
+
   /// No description provided for @seedColorLabel.
   ///
   /// In en, this message translates to:

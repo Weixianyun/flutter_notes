@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../features/settings/providers/settings_provider.dart';
 
 /// 应用偏好设置服务
 ///
@@ -24,18 +25,14 @@ class PreferencesService {
   // ── 主题模式 ──
 
   /// 获取主题模式（默认跟随系统）
-  ThemeMode getThemeMode() {
+  AppThemeMode getThemeMode() {
     final value = _prefs.getString(_themeModeKey);
-    return switch (value) {
-      'light' => ThemeMode.light,
-      'dark' => ThemeMode.dark,
-      _ => ThemeMode.system,
-    };
+    return AppThemeMode.fromStorageKey(value);
   }
 
   /// 设置主题模式
-  Future<void> setThemeMode(ThemeMode mode) {
-    return _prefs.setString(_themeModeKey, mode.name);
+  Future<void> setThemeMode(AppThemeMode mode) {
+    return _prefs.setString(_themeModeKey, mode.storageKey);
   }
 
   // ── 种子色 ──

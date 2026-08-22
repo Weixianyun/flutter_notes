@@ -12,8 +12,9 @@ import 'services/service_providers.dart';
 
 /// Flutter Notes 应用根组件
 ///
-/// 集成 Material 3 主题系统（明暗双模式）、go_router 声明式路由
-/// 以及 i18n 国际化（中英双语）。所有偏好通过 Riverpod Provider 注入。
+/// 集成 Material 3 主题系统（浅色 / 深色 / AMOLED 真黑 / 跟随系统四档）、
+/// go_router 声明式路由以及 i18n 国际化（中英双语）。
+/// 所有偏好通过 Riverpod Provider 注入。
 ///
 /// 启动时间监控：[initState] 中通过 `addPostFrameCallback` 测量
 /// 从进程启动到首帧绘制完成的总耗时，启用时记录到 [performanceMetricsProvider]。
@@ -51,16 +52,34 @@ class _FlutterNotesAppState extends ConsumerState<FlutterNotesApp> {
 
   @override
   Widget build(BuildContext context) {
-    final themeMode = ref.watch(themeModeProvider);
+    final appThemeMode = ref.watch(themeModeProvider);
     final seedColor = ref.watch(seedColorProvider);
     final locale = ref.watch(appLocaleProvider);
+
+    // 根据 AppThemeMode 决定 Material theme / darkTheme
+    // - AMOLED 复用 dark 分支（与 Material 切换逻辑一致），但通过 builder 提供 AMOLED ThemeData
+    // - light 显式指定
+    // - system 让 MaterialApp 根据 platformBrightness 自行选择
+    final light = AppTheme.light(seedColor: seedColor);
+    final dark = appThemeMode == AppThemeMode.amoled
+        ? AppTheme.amoled(seedColor: seedColor)
+        : AppTheme.dark(seedColor: seedColor);
 
     return MaterialApp.router(
       onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(seedColor: seedColor),
-      darkTheme: AppTheme.dark(seedColor: seedColor),
-      themeMode: themeMode,
+      theme: light,
+      darkTheme: dark,
+      themeMode: appThemeMode.toMaterialThemeMode(),
+      // 主题切换动画：AnimatedTheme 让 ThemeData 变更时所有依赖主题色的控件平滑过渡
+      builder: (context, child) {
+        return AnimatedTheme(
+          data: Theme.of(context),
+          duration: const Duration(milliseconds: 280),
+          curve: Curves.easeOutCubic,
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
       locale: locale,
       supportedLocales: supportedLocales,
       localizationsDelegates: const [

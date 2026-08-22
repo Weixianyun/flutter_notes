@@ -5,9 +5,17 @@
   "appearanceSection": "外观",
   "editorBehaviorSection": "编辑器",
   "themeModeLabel": "主题模式",
-  "themeModeLight": "浅色模式",
-  "themeModeDark": "深色模式",
+  "themeModeLight": "浅色",
+  "themeModeDark": "深色",
   "themeModeSystem": "跟随系统",
+  "themeModeAmoled": "AMOLED 真黑",
+  "themeModeAmoledSubtitle": "纯黑背景，OLED 屏幕更省电",
+  "themeChangedTo": "已切换到{mode}主题",
+  "@themeChangedTo": {
+    "placeholders": {
+      "mode": { "type": "String" }
+    }
+  },
   "seedColorLabel": "主题色",
   "syncSection": "云同步",
   "githubSync": "GitHub 同步",

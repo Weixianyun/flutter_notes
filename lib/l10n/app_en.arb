@@ -8,6 +8,14 @@
   "themeModeLight": "Light",
   "themeModeDark": "Dark",
   "themeModeSystem": "System",
+  "themeModeAmoled": "AMOLED black",
+  "themeModeAmoledSubtitle": "True black background for OLED screens",
+  "themeChangedTo": "Theme switched to {mode}",
+  "@themeChangedTo": {
+    "placeholders": {
+      "mode": { "type": "String" }
+    }
+  },
   "seedColorLabel": "Seed color",
   "syncSection": "Cloud sync",
   "githubSync": "GitHub Sync",

@@ -1,4 +1,5 @@
 import 'package:flutter_notes/data/models/note_model.dart';
+import 'package:flutter_notes/data/models/note_search_result.dart';
 import 'package:flutter_notes/data/repositories/note_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -22,6 +23,8 @@ void main() {
       // 至少应找到一个笔记 content 中含 "colorScheme"
       final results = await repo.searchNotesWithHighlights('seed-1');
       // seed-1 是 'Dart 3 空安全实践', 不会匹配;改用肯定存在的词
+      expect(results, isA<List<NoteSearchResult>>(),
+          reason: 'Method should return list of NoteSearchResult');
       final hits = await repo.searchNotesWithHighlights('主题');
       final titleHits = hits
           .where((r) => r.note.title.toLowerCase().contains('主题'))

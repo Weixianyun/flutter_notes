@@ -7,19 +7,61 @@ import '../../../services/service_providers.dart';
 /// 笔记列表密度
 enum NotesDensity { comfortable, compact }
 
+/// 主题模式（应用层）
+///
+/// 相比 Flutter 自带的 [ThemeMode]（仅 light/dark/system），
+/// 这里显式加入 `amoled` 用于 OLED 设备的真黑背景。
+enum AppThemeMode {
+  light,
+  dark,
+  amoled,
+  system;
+
+  String get storageKey => switch (this) {
+        AppThemeMode.light => 'light',
+        AppThemeMode.dark => 'dark',
+        AppThemeMode.amoled => 'amoled',
+        AppThemeMode.system => 'system',
+      };
+
+  static AppThemeMode fromStorageKey(String? key) {
+    return switch (key) {
+      'light' => AppThemeMode.light,
+      'dark' => AppThemeMode.dark,
+      'amoled' => AppThemeMode.amoled,
+      _ => AppThemeMode.system,
+    };
+  }
+
+  /// 映射到 Material 的 [ThemeMode]
+  ///
+  /// AMOLED 复用 dark 的色彩分支，但 [AppTheme] 会用 [AppTheme.amoled] 替换。
+  ThemeMode toMaterialThemeMode() => switch (this) {
+        AppThemeMode.light => ThemeMode.light,
+        AppThemeMode.dark || AppThemeMode.amoled => ThemeMode.dark,
+        AppThemeMode.system => ThemeMode.system,
+      };
+
+  /// 是否启用深色（dark 或 amoled 之一）
+  bool get isDark =>
+      this == AppThemeMode.dark ||
+      this == AppThemeMode.amoled ||
+      this == AppThemeMode.system;
+}
+
 /// 主题模式状态管理
 ///
-/// 支持浅色、深色、跟随系统三种模式。
+/// 支持浅色、深色、AMOLED 真黑、跟随系统四种模式。
 /// 通过 [PreferencesService] 持久化保存，应用启动时自动恢复。
-class ThemeModeNotifier extends Notifier<ThemeMode> {
+class ThemeModeNotifier extends Notifier<AppThemeMode> {
   @override
-  ThemeMode build() {
+  AppThemeMode build() {
     final prefs = ref.read(preferencesServiceProvider);
     return prefs.getThemeMode();
   }
 
   /// 设置主题模式并持久化
-  void setMode(ThemeMode mode) {
+  void setMode(AppThemeMode mode) {
     final prefs = ref.read(preferencesServiceProvider);
     prefs.setThemeMode(mode);
     state = mode;
@@ -28,7 +70,7 @@ class ThemeModeNotifier extends Notifier<ThemeMode> {
 
 /// 主题模式 Provider
 final themeModeProvider =
-    NotifierProvider<ThemeModeNotifier, ThemeMode>(ThemeModeNotifier.new);
+    NotifierProvider<ThemeModeNotifier, AppThemeMode>(ThemeModeNotifier.new);
 
 /// 种子色状态管理
 ///

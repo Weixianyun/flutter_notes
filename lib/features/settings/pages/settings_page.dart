@@ -38,29 +38,46 @@ class SettingsPage extends ConsumerWidget {
             leading: const Icon(Icons.palette_outlined),
             title: Text(l10n.themeModeLabel),
             subtitle: Text(_themeModeLabel(themeMode, l10n)),
-            trailing: SegmentedButton<ThemeMode>(
+            trailing: SegmentedButton<AppThemeMode>(
               segments: [
                 ButtonSegment(
-                  value: ThemeMode.light,
+                  value: AppThemeMode.light,
                   icon: const Icon(Icons.light_mode, size: 16),
                   tooltip: l10n.themeModeLight,
                 ),
                 ButtonSegment(
-                  value: ThemeMode.system,
+                  value: AppThemeMode.system,
                   icon: const Icon(Icons.settings_brightness, size: 16),
                   tooltip: l10n.themeModeSystem,
                 ),
                 ButtonSegment(
-                  value: ThemeMode.dark,
+                  value: AppThemeMode.dark,
                   icon: const Icon(Icons.dark_mode, size: 16),
                   tooltip: l10n.themeModeDark,
                 ),
               ],
               selected: {themeMode},
-              onSelectionChanged: (set) =>
-                  ref.read(themeModeProvider.notifier).setMode(set.first),
+              onSelectionChanged: (set) => _switchTheme(
+                context,
+                ref,
+                set.first,
+              ),
               style: const ButtonStyle(
                 visualDensity: VisualDensity.compact,
+              ),
+            ),
+          ),
+          // AMOLED 真黑单独列出（OLED 屏幕专用）
+          ListTile(
+            leading: const Icon(Icons.contrast_outlined),
+            title: Text(l10n.themeModeAmoled),
+            subtitle: Text(l10n.themeModeAmoledSubtitle),
+            trailing: Switch(
+              value: themeMode == AppThemeMode.amoled,
+              onChanged: (enabled) => _switchTheme(
+                context,
+                ref,
+                enabled ? AppThemeMode.amoled : AppThemeMode.system,
               ),
             ),
           ),
@@ -309,12 +326,32 @@ class SettingsPage extends ConsumerWidget {
     );
   }
 
-  String _themeModeLabel(ThemeMode mode, AppLocalizations l10n) {
+  String _themeModeLabel(AppThemeMode mode, AppLocalizations l10n) {
     return switch (mode) {
-      ThemeMode.light => l10n.themeModeLight,
-      ThemeMode.dark => l10n.themeModeDark,
-      ThemeMode.system => l10n.themeModeSystem,
+      AppThemeMode.light => l10n.themeModeLight,
+      AppThemeMode.dark => l10n.themeModeDark,
+      AppThemeMode.amoled => l10n.themeModeAmoled,
+      AppThemeMode.system => l10n.themeModeSystem,
     };
+  }
+
+  /// 切换主题并触发 SnackBar 反馈
+  void _switchTheme(
+    BuildContext context,
+    WidgetRef ref,
+    AppThemeMode mode,
+  ) {
+    final l10n = AppLocalizations.of(context);
+    if (ref.read(themeModeProvider) == mode) return;
+    ref.read(themeModeProvider.notifier).setMode(mode);
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(l10n.themeChangedTo(_themeModeLabel(mode, l10n))),
+          duration: const Duration(seconds: 2),
+        ),
+      );
   }
 
   String _localeLabel(Locale? locale, AppLocalizations l10n) {

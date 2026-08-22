@@ -24,13 +24,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get themeModeLabel => '主题模式';
 
   @override
-  String get themeModeLight => '浅色模式';
+  String get themeModeLight => '浅色';
 
   @override
-  String get themeModeDark => '深色模式';
+  String get themeModeDark => '深色';
 
   @override
   String get themeModeSystem => '跟随系统';
+
+  @override
+  String get themeModeAmoled => 'AMOLED 真黑';
+
+  @override
+  String get themeModeAmoledSubtitle => '纯黑背景，OLED 屏幕更省电';
+
+  @override
+  String themeChangedTo(String mode) {
+    return '已切换到$mode主题';
+  }
 
   @override
   String get seedColorLabel => '主题色';

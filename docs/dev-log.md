@@ -1,5 +1,97 @@
 # 开发日志
 
+## 2026-08-22 | Week 4 Day 4 — AMOLED 真黑 + 主题切换动画 + 反馈
+
+### 今日完成
+
+#### 1. 主题枚举升级为 `AppThemeMode`
+- 之前 `themeModeProvider` 复用 Flutter 自带 `ThemeMode`(仅 light/dark/system)
+- 新增 `enum AppThemeMode { light, dark, amoled, system }`,提供:
+  - `storageKey` / `fromStorageKey()`:与 SharedPreferences 互转
+  - `toMaterialThemeMode()`:映射到 Material `ThemeMode`(AMOLED 复用 dark 分支)
+  - `isDark` getter
+- 持久化键从 `'light' / 'dark' / 'system'` 扩为 4 种,向后兼容老键
+
+#### 2. `PreferencesService` 主题读写
+- `getThemeMode()` 返回 `AppThemeMode`;`setThemeMode()` 接受 `AppThemeMode`
+- 删除未使用的 `flutter/material.dart` 导入(枚举搬到 `settings_provider`)
+
+#### 3. `AppTheme` 三套主题
+- `light()` / `dark()`:原有 Material 3 `ColorScheme.fromSeed`
+- 新增 `amoled()`:
+  - `surface` 强制 `#000000`,`surfaceContainer*` 衍生 5 级深度的纯黑
+  - `cardTheme.color` 改为 `#0F0F0F`
+  - `inputDecorationTheme.fillColor` 改为 `#0A0A0A`
+  - `navigationBarTheme.backgroundColor` 改为 `#000000`
+  - 适合 OLED 屏幕,关像素区域完全熄灭
+- 三套主题统一启用:
+  - `pageTransitionsTheme`:Android 用 `PredictiveBackPageTransitionsBuilder`,iOS/macOS 用 `CupertinoPageTransitionsBuilder`
+  - `snackBarTheme`:floating + 12px 圆角 + inverseSurface
+  - `visualDensity: VisualDensity.adaptivePlatformDensity`
+
+#### 4. `app.dart` 主题切换动画
+- 引入 `AnimatedTheme(280ms, easeOutCubic)` 包裹 `MaterialApp.router` 的子组件
+- 所有依赖 `Theme.of(context).colorScheme` 的控件在主题变更时自动平滑过渡
+- AMOLED 模式时 `darkTheme` 改用 `AppTheme.amoled()`,非 AMOLED 时用 `AppTheme.dark()`
+
+#### 5. `settings_page` UI
+- 主题模式 SegmentedButton 保留 light/system/dark 三档,改用 `AppThemeMode`
+- 新增 AMOLED 真黑 ListTile:Switch 控件 + `themeModeAmoledSubtitle` 副标题
+- 提取 `_switchTheme(context, ref, mode)` 工具方法:
+  - 避免重复 SnackBar 弹跳(用 `hideCurrentSnackBar` 先收起)
+  - 显示 `l10n.themeChangedTo(_themeModeLabel(mode, l10n))` 反馈
+  - 时长 2 秒,使用 `SnackBarThemeData` 配置的浮动样式
+
+#### 6. i18n 键补充
+- 中英文 ARB 新增 3 个键:
+  - `themeModeAmoled` / `themeModeAmoledSubtitle`
+  - `themeChangedTo`(占位符 `mode: String`)
+
+#### 7. 测试
+- 新建 `test/theme/app_theme_test.dart`(12 用例):
+  - `AppThemeMode`:`storageKey` 字符串往返、未知值兜底、AMOLED 映射到 dark、`isDark` 三态
+  - `AppTheme` 工厂:brightness / scaffoldBackgroundColor / seed 注入 / snackBar / pageTransitions
+- `test/widget_test.dart` 新增 1 个集成测试:
+  - `Toggling AMOLED switch shows theme-changed snack bar`:点 AMOLED 开关后 SnackBar 显示主题已切换
+- 更新 `Settings page shows theme mode selector` 测试:把 `SegmentedButton<ThemeMode>` 改为 `SegmentedButton<AppThemeMode>`
+
+### 验证结果
+- `flutter analyze`: No issues found! (ran in 5.9s)
+- `flutter test`: All tests passed! (178 tests,原 166 + 12 项 Day 4 新增)
+
+### 遇到的问题及解决
+
+#### 问题 1: `CupertinoPageTransitionsBuilder` 未定义
+- **现象**:analyze 报 5 个 error 涉及 `undefined_method` 与 `non_constant_map_value`
+- **原因**:`PageTransitionsTheme` 的 `builders` 在 `cupertino.dart`,而我只 `import 'flutter/material.dart'`
+- **解决**:新增 `import 'package:flutter/cupertino.dart';`
+
+#### 问题 2: 测试找不到 `SegmentedButton<ThemeMode>`
+- **现象**:`Settings page shows theme mode selector` 测试失败,Found 0 widgets
+- **原因**:把枚举从 `ThemeMode` 改为 `AppThemeMode` 后,泛型类型已变
+- **解决**:把测试断言中的 `SegmentedButton<ThemeMode>` 改为 `SegmentedButton<AppThemeMode>`
+
+#### 问题 3: 测试缺 `NoteSearchResult` 导入
+- **现象**:Day 6 留下的 `search_highlights_test.dart` 用了 `NoteSearchResult` 但未 import
+- **解决**:补上 `import 'package:flutter_notes/data/models/note_search_result.dart';`
+
+#### 问题 4: `unused_local_variable` 警告
+- **现象**:测试中 `final results = ...` 未被使用
+- **解决**:把变量移除,仅在断言中用 `expect(results, isA<List<...>>())`
+
+### 技术决策
+- **AMOLED 作为 4th 模式而非子选项**:OLED 真黑与普通深色配色不同,适合作为独立模式供用户主动选择
+- **复用 `ThemeMode.dark` 而非新增枚举值**:`MaterialApp.themeMode` 只接受 3 种,通过 `darkTheme` 字段替换实现 AMOLED 差异化
+- **`AnimatedTheme` 而非 `AnimatedBuilder`**:标准 Material 切换动画方案,自动处理所有依赖主题色的子组件
+- **AMOLED 衍生 5 级 surface 灰度**:保留 Material 3 的 surface tone system,避免所有容器都全黑导致无层次
+- **SnackBar 反馈**:避免用户不确定切换是否生效(尤其在跟随系统模式下,系统切换后无明显变化)
+- **`pageTransitionsTheme` 启用 `PredictiveBack`**:Android 14+ 平台提供手势预测返回,与 Material 3 风格一致
+
+### Git 提交记录
+`待提交`
+
+---
+
 ## 2026-08-22 | Week 4 Day 1 — 全文搜索高亮 + 跳转定位
 
 ### 今日完成
