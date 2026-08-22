@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,9 +7,11 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
 import '../../../data/models/note_model.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../services/performance_service.dart';
 import '../../../services/service_providers.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../notes/providers/notes_provider.dart';
+import '../../settings/providers/performance_provider.dart';
 import '../../settings/providers/settings_provider.dart';
 import '../providers/sort_provider.dart';
 import '../providers/tags_provider.dart';
@@ -31,6 +34,49 @@ class NotesListPage extends ConsumerStatefulWidget {
 class _NotesListPageState extends ConsumerState<NotesListPage> {
   final Set<String> _selectedIds = {};
   bool _isSelectionMode = false;
+
+  // ── 滚动 FPS 采集 ──
+  // 累计页面生命周期内所有帧的 totalSpan（毫秒）。
+  // dispose 时计算平均帧耗时并写入 [performanceMetricsProvider]。
+  double _totalFrameMs = 0;
+  int _frameCount = 0;
+  TimingsCallback? _timingsCallback;
+
+  @override
+  void initState() {
+    super.initState();
+    _timingsCallback = _onFrameTimings;
+    SchedulerBinding.instance.addTimingsCallback(_timingsCallback!);
+  }
+
+  void _onFrameTimings(List<FrameTiming> timings) {
+    for (final t in timings) {
+      // totalSpan = 完整帧耗时（build + layout + paint + composite）
+      _totalFrameMs += t.totalSpan.inMicroseconds / 1000.0;
+      _frameCount++;
+    }
+  }
+
+  @override
+  void dispose() {
+    if (_timingsCallback != null) {
+      SchedulerBinding.instance.removeTimingsCallback(_timingsCallback!);
+    }
+    _reportScrollFps();
+    super.dispose();
+  }
+
+  void _reportScrollFps() {
+    if (_frameCount < 10) return; // 样本太少不记录
+    final avgMs = _totalFrameMs / _frameCount;
+    ref.read(performanceMetricsProvider.notifier).add(
+          PerformanceMetric(
+            kind: PerformanceMetricKind.scroll,
+            valueMs: avgMs,
+            recordedAt: DateTime.now(),
+          ),
+        );
+  }
 
   void _enterSelectionMode(String noteId) {
     setState(() {

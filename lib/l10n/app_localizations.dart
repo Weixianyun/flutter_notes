@@ -847,6 +847,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Compact'**
   String get listDensityCompact;
+
+  /// No description provided for @performanceSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Performance'**
+  String get performanceSection;
+
+  /// No description provided for @performanceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Performance monitor'**
+  String get performanceTitle;
+
+  /// No description provided for @performanceSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'View startup time and scroll FPS history'**
+  String get performanceSubtitle;
+
+  /// No description provided for @performanceEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable performance monitoring'**
+  String get performanceEnabled;
+
+  /// No description provided for @performanceEnabledSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Record cold-start time and scroll frame metrics'**
+  String get performanceEnabledSubtitle;
+
+  /// No description provided for @performanceStartup.
+  ///
+  /// In en, this message translates to:
+  /// **'Cold start time'**
+  String get performanceStartup;
+
+  /// No description provided for @performanceScroll.
+  ///
+  /// In en, this message translates to:
+  /// **'Scroll FPS'**
+  String get performanceScroll;
+
+  /// No description provided for @performanceNoData.
+  ///
+  /// In en, this message translates to:
+  /// **'No records yet'**
+  String get performanceNoData;
+
+  /// No description provided for @performanceFpsLine.
+  ///
+  /// In en, this message translates to:
+  /// **'{fps} FPS ({avgMs} ms/frame)'**
+  String performanceFpsLine(String fps, String avgMs);
+
+  /// No description provided for @performanceHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tip: open the app again or scroll the notes list to collect fresh samples.'**
+  String get performanceHint;
+
+  /// No description provided for @performanceClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear all records'**
+  String get performanceClear;
 }
 
 class _AppLocalizationsDelegate

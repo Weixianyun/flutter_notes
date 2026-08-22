@@ -1,5 +1,102 @@
 # 开发日志
 
+## 2026-08-22 | Week 3 Day 5（续）— 性能监控（启动时间 + 滚动 FPS）
+
+### 今日完成
+
+#### 1. 性能监控服务
+- 新建 `lib/services/performance_service.dart`
+  - `PerformanceMetricKind` 枚举：`startup` / `scroll`
+  - `PerformanceMetric` 数据类：类型、数值、记录时间，`fps` getter 仅对滚动类型返回
+  - `PerformanceService` 基于 `SharedPreferences` 持久化：
+    - `processStartMs` 静态字段 + `markProcessStart()` 静态方法，供 `main()` 在 `ensureInitialized()` 前调用
+    - `enabled` 开关（默认 true），`addMetric()` 关闭时直接忽略
+    - `_maxRecords = 20`，环形缓冲保留最近 20 条
+    - `getMetrics()` 解析失败时降级返回空列表，不抛异常
+  - 暴露 `maxRecordsForTest` 静态 getter 仅供测试断言
+
+#### 2. 性能 Provider
+- 新建 `lib/features/settings/providers/performance_provider.dart`
+  - `performanceServiceProvider`：通过 `service_providers.dart` 注入 service 实例
+  - `performanceEnabledProvider`（`NotifierProvider<bool>`）：读取并持久化启用开关
+  - `performanceMetricsProvider`（`NotifierProvider<List<PerformanceMetric>>`）：暴露当前记录、`add()` / `clear()` 写操作
+
+#### 3. 启动时间采集
+- `main.dart` 在 `WidgetsFlutterBinding.ensureInitialized()` 之前调用 `PerformanceService.markProcessStart()`
+- `app.dart` 改造为 `ConsumerStatefulWidget`，`initState` 通过 `addPostFrameCallback` 记录首帧
+  - 读取 `service.processStartMs`（已加 `startMs == 0` 防御）
+  - 计算 `elapsed = now - startMs`，过滤 0/负数及 >60s 的异常值
+  - 启用时向 `performanceMetricsProvider` 写入一条 `startup` 记录
+
+#### 4. 滚动 FPS 采集
+- `notes_list_page.dart` 改造为 `ConsumerStatefulWidget`
+  - `initState` 注册 `TimingsCallback` 累加 `totalSpan` 毫秒与帧数
+  - `dispose` 中 `removeTimingsCallback` 并在帧数 ≥10 时上报 `scroll` 记录
+- 选择 `dispose` 上报而非滚动期间持续上报：避免在用户未主动滚动时刷大量 16ms 静止帧
+
+#### 5. 性能监控面板
+- 新建 `lib/features/settings/pages/performance_page.dart`
+  - 顶部 `SwitchListTile` 启用开关
+  - 「冷启动时间」分区：每条记录显示 ms 数值 + 时间戳，<1500ms 绿、<3000ms 橙、≥3000ms 红
+  - 「滚动帧率」分区：`{fps} FPS（{avgMs} 毫秒/帧）` 模板，颜色规则 55+ 绿 / 45+ 橙 / 其他红
+  - AppBar 删除按钮 + 空态提示
+- `app_router.dart` 新增 `/performance` 路由
+- `settings_page.dart` 在「数据管理」之后、「关于」之前新增「性能监控」分区入口
+  - 列表行点击 `context.push(AppRouter.performance)`
+
+#### 6. i18n 键补充
+- 中英文 ARB 新增 11 个键：
+  - `performanceSection` / `performanceTitle` / `performanceSubtitle`
+  - `performanceEnabled` / `performanceEnabledSubtitle`
+  - `performanceStartup` / `performanceScroll` / `performanceNoData`
+  - `performanceFpsLine`（占位符 `fps`、`avgMs`，类型均为 `String`）
+  - `performanceHint` / `performanceClear`
+- 重新执行 `flutter gen-l10n` 生成 `app_localizations.dart`
+
+#### 7. 单元测试
+- 新建 `test/services/performance_service_test.dart`，13 个用例：
+  - `PerformanceMetric.fps`：startup 返回 null；scroll 非正值返回 null；16.7ms 期望 ≈59.88 FPS
+  - `toJson/fromJson` 往返；缺字段返回 null；未知 kind 兜底为 startup
+  - `enabled` 默认 true 且可切换
+  - `addMetric` 按时间倒序、上限 20 条、禁用时不写入
+  - `clear` 清空记录
+  - `markProcessStart` 记录当前时间
+  - 损坏 JSON 不抛异常，降级返回空列表
+- `PerformanceService` 公开 `maxRecordsForTest` 以便断言上限
+
+### 验证结果
+- `flutter analyze`: No issues found! (ran in 5.9s)
+- `flutter test`: All tests passed! (148 tests，含原 135 + 13 项性能)
+
+### 遇到的问题及解决
+
+#### 问题 1: 静态成员通过实例访问
+- **现象**：`flutter analyze` 报错 `The static getter 'processStartMs' can't be accessed through an instance`
+- **原因**：`final service = ref.read(...); service.processStartMs` —— `processStartMs` 是 `static int`
+- **解决**：改为 `PerformanceService.processStartMs` 显式通过类访问，并加 `startMs == 0` 防御避免未初始化
+
+#### 问题 2: `TickerCallback` 类型不匹配
+- **现象**：`A value of type 'void Function(List<FrameTiming>)' can't be assigned to a variable of type 'TickerCallback?'`
+- **原因**：`SchedulerBinding.addTimingsCallback` 签名是 `TimingsCallback`，不是 `TickerCallback`
+- **解决**：将 `_timingsCallback` 字段类型显式标注为 `TimingsCallback?`
+
+#### 问题 3: l10n 键未生成
+- **现象**：分析报错 `The getter 'performanceSection' isn't defined for the type 'AppLocalizations'`
+- **原因**：ARB 新增键后未运行 `flutter gen-l10n` 重新生成 Dart 代理类
+- **解决**：执行 `flutter gen-l10n` 后所有 17 个错误清零
+
+### 技术决策
+- **`dispose` 上报滚动 FPS**：避免空帧刷屏污染指标；离开列表页即落盘一次
+- **静态 `processStartMs` 而非 Riverpod provider**：必须在 `WidgetsFlutterBinding.ensureInitialized()` 之前写入，Riverpod 容器此时不可用
+- **JSON 单 key 存储**：20 条记录 × 80 字节 ≈ 1.6KB，单次 `getString/setString` 比逐条维护更省 IO
+- **环形缓冲上限 20**：用户视角「最近几次启动/滚动足够反映问题」，不浪费存储
+- **颜色阈值参考 60/45 FPS**：60FPS 对应 16.7ms/帧；45FPS 是体验明显下降的临界点
+
+### Git 提交记录
+`待提交`
+
+---
+
 ## 2026-08-21 | Week 3 Day 5 — 编辑器自动保存 + 设置项接入
 
 ### 今日完成

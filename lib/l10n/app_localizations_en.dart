@@ -456,4 +456,41 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get listDensityCompact => 'Compact';
+
+  @override
+  String get performanceSection => 'Performance';
+
+  @override
+  String get performanceTitle => 'Performance monitor';
+
+  @override
+  String get performanceSubtitle => 'View startup time and scroll FPS history';
+
+  @override
+  String get performanceEnabled => 'Enable performance monitoring';
+
+  @override
+  String get performanceEnabledSubtitle =>
+      'Record cold-start time and scroll frame metrics';
+
+  @override
+  String get performanceStartup => 'Cold start time';
+
+  @override
+  String get performanceScroll => 'Scroll FPS';
+
+  @override
+  String get performanceNoData => 'No records yet';
+
+  @override
+  String performanceFpsLine(String fps, String avgMs) {
+    return '$fps FPS ($avgMs ms/frame)';
+  }
+
+  @override
+  String get performanceHint =>
+      'Tip: open the app again or scroll the notes list to collect fresh samples.';
+
+  @override
+  String get performanceClear => 'Clear all records';
 }

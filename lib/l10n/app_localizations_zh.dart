@@ -419,4 +419,39 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get listDensityCompact => '紧凑';
+
+  @override
+  String get performanceSection => '性能监控';
+
+  @override
+  String get performanceTitle => '性能监控';
+
+  @override
+  String get performanceSubtitle => '查看启动时间和滚动帧率历史';
+
+  @override
+  String get performanceEnabled => '启用性能监控';
+
+  @override
+  String get performanceEnabledSubtitle => '记录冷启动耗时和列表滚动帧率';
+
+  @override
+  String get performanceStartup => '冷启动时间';
+
+  @override
+  String get performanceScroll => '滚动帧率';
+
+  @override
+  String get performanceNoData => '暂无记录';
+
+  @override
+  String performanceFpsLine(String fps, String avgMs) {
+    return '$fps FPS（$avgMs 毫秒/帧）';
+  }
+
+  @override
+  String get performanceHint => '提示：重新打开应用或滚动笔记列表可采集新数据。';
+
+  @override
+  String get performanceClear => '清除所有记录';
 }

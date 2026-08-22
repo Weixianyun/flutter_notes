@@ -124,5 +124,22 @@
   "priorityHigh": "高",
   "listDensity": "列表密度",
   "listDensityComfortable": "舒适",
-  "listDensityCompact": "紧凑"
+  "listDensityCompact": "紧凑",
+  "performanceSection": "性能监控",
+  "performanceTitle": "性能监控",
+  "performanceSubtitle": "查看启动时间和滚动帧率历史",
+  "performanceEnabled": "启用性能监控",
+  "performanceEnabledSubtitle": "记录冷启动耗时和列表滚动帧率",
+  "performanceStartup": "冷启动时间",
+  "performanceScroll": "滚动帧率",
+  "performanceNoData": "暂无记录",
+  "performanceFpsLine": "{fps} FPS（{avgMs} 毫秒/帧）",
+  "@performanceFpsLine": {
+    "placeholders": {
+      "fps": { "type": "String" },
+      "avgMs": { "type": "String" }
+    }
+  },
+  "performanceHint": "提示：重新打开应用或滚动笔记列表可采集新数据。",
+  "performanceClear": "清除所有记录"
 }

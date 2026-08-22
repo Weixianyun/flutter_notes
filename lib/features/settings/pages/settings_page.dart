@@ -267,6 +267,17 @@ class SettingsPage extends ConsumerWidget {
           ),
           const Divider(height: 32),
 
+          // ── 性能监控 ──
+          _SectionHeader(title: l10n.performanceSection),
+          ListTile(
+            leading: const Icon(Icons.speed_outlined),
+            title: Text(l10n.performanceTitle),
+            subtitle: Text(l10n.performanceSubtitle),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(AppRouter.performance),
+          ),
+          const Divider(height: 32),
+
           // ── 关于 ──
           _SectionHeader(title: l10n.aboutSection),
           ListTile(

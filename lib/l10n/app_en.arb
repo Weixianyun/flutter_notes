@@ -206,5 +206,22 @@
   "priorityHigh": "High",
   "listDensity": "List density",
   "listDensityComfortable": "Comfortable",
-  "listDensityCompact": "Compact"
+  "listDensityCompact": "Compact",
+  "performanceSection": "Performance",
+  "performanceTitle": "Performance monitor",
+  "performanceSubtitle": "View startup time and scroll FPS history",
+  "performanceEnabled": "Enable performance monitoring",
+  "performanceEnabledSubtitle": "Record cold-start time and scroll frame metrics",
+  "performanceStartup": "Cold start time",
+  "performanceScroll": "Scroll FPS",
+  "performanceNoData": "No records yet",
+  "performanceFpsLine": "{fps} FPS ({avgMs} ms/frame)",
+  "@performanceFpsLine": {
+    "placeholders": {
+      "fps": { "type": "String" },
+      "avgMs": { "type": "String" }
+    }
+  },
+  "performanceHint": "Tip: open the app again or scroll the notes list to collect fresh samples.",
+  "performanceClear": "Clear all records"
 }

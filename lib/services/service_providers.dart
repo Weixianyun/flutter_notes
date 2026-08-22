@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'crypto_service.dart';
 import 'export_service.dart';
 import 'github_service.dart';
+import 'performance_service.dart';
 import 'preferences_service.dart';
 import 'sync_service.dart';
 import 'tag_metadata_service.dart';
@@ -70,4 +71,11 @@ final exportServiceProvider = Provider<ExportService>((ref) {
   final github = ref.watch(githubServiceProvider);
   final sync = SyncService(github, 'export-only');
   return ExportService(sync);
+});
+
+/// 性能监控服务 Provider
+///
+/// 持久化「启用开关」和最近 20 条 [PerformanceMetric] 记录。
+final performanceServiceProvider = Provider<PerformanceService>((ref) {
+  return PerformanceService(ref.watch(sharedPreferencesProvider));
 });
