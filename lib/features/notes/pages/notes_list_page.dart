@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/design/app_animations.dart';
+import '../../../core/design/design_tokens.dart';
 import '../../../core/router/app_router.dart';
 import '../../../data/models/note_model.dart';
 import '../../../l10n/app_localizations.dart';
@@ -346,23 +348,21 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
         children: [
           if (hasTags && !_isSelectionMode) const TagFilterBar(),
           Expanded(
-            child: allNotesAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, _) => _buildErrorState(context, ref, error),
-              data: (allNotes) {
-                if (allNotes.isEmpty) {
-                  return _buildEmptyState(context, ref);
-                }
-                return notesAsync.when(
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (error, _) =>
-                      _buildErrorState(context, ref, error),
-                  data: (notes) => notes.isEmpty
-                      ? _buildNoFilteredNotes(context, ref)
-                      : _buildNotesList(context, ref, notes),
-                );
-              },
+            child: SwitchingView(
+              isLoading: allNotesAsync.isLoading,
+              isEmpty: (allNotesAsync.valueOrNull?.isEmpty ?? true) ||
+                  (notesAsync.valueOrNull?.isEmpty ?? true),
+              loading: const Center(child: CircularProgressIndicator()),
+              empty: allNotesAsync.valueOrNull == null
+                  ? const SizedBox.shrink()
+                  : (allNotesAsync.valueOrNull!.isEmpty
+                      ? _buildEmptyState(context, ref)
+                      : _buildNoFilteredNotes(context, ref)),
+              content: _buildNotesList(
+                context,
+                ref,
+                notesAsync.valueOrNull ?? const [],
+              ),
             ),
           ),
         ],
@@ -387,10 +387,13 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
     final cardPadding = isCompact ? 4.0 : 8.0;
 
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.xs,
+        AppSpacing.md,
+        AppSpacing.xxl + AppSpacing.xxl + AppSpacing.xs,
+      ),
       itemCount: notes.length,
-      // ignore: deprecated_member_use
-      cacheExtent: 500,
       itemBuilder: (context, index) {
         final note = notes[index];
         final isSelected = _selectedIds.contains(note.id);
@@ -403,10 +406,10 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
                 : DismissDirection.endToStart,
             background: Container(
               alignment: Alignment.centerRight,
-              padding: const EdgeInsets.only(right: 24),
+              padding: const EdgeInsets.only(right: AppSpacing.xl),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.errorContainer,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(AppRadius.lg),
               ),
               child: Icon(
                 Icons.delete_outline,
@@ -459,21 +462,6 @@ class _NotesListPageState extends ConsumerState<NotesListPage> {
       subtitle: l10n.noFilteredNotesSubtitle,
       actionLabel: l10n.noFilteredNotesAction,
       onAction: () => ref.read(selectedTagsProvider.notifier).clear(),
-    );
-  }
-
-  Widget _buildErrorState(
-    BuildContext context,
-    WidgetRef ref,
-    Object error,
-  ) {
-    final l10n = AppLocalizations.of(context);
-    return EmptyState(
-      icon: Icons.error_outline,
-      title: l10n.loadErrorTitle,
-      subtitle: '${l10n.loadErrorTitle}: $error',
-      actionLabel: l10n.loadErrorAction,
-      onAction: () => ref.invalidate(notesProvider),
     );
   }
 

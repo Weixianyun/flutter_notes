@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/design/design_tokens.dart';
 import '../../../core/router/app_router.dart';
 import '../../../data/models/note_search_result.dart';
 import '../../../shared/widgets/empty_state.dart';
@@ -122,12 +123,17 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 
   Widget _buildResults(List<NoteSearchResult> results, String query) {
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.xs,
+        AppSpacing.md,
+        AppSpacing.md,
+      ),
       itemCount: results.length,
       itemBuilder: (context, index) {
         final result = results[index];
         return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -229,14 +235,17 @@ class _HighlightSnippetCard extends StatelessWidget {
     final segments = parseHighlight(snippet);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      margin: const EdgeInsets.only(bottom: AppSpacing.xxs + 2),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs + 2,
+      ),
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerLow,
         border: Border(
           left: BorderSide(color: colorScheme.primary, width: 3),
         ),
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(AppRadius.xs + 2),
       ),
       child: RichText(
         maxLines: 2,

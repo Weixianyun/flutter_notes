@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/design/design_tokens.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/models/note_model.dart';
 import '../../../services/service_providers.dart';
@@ -36,14 +37,14 @@ class NoteCard extends ConsumerWidget {
     final colorScheme = theme.colorScheme;
     final dateFormat = DateFormat('MM/dd HH:mm');
     final tagMetadata = ref.watch(tagMetadataServiceProvider);
-    final padding = compact ? 10.0 : 16.0;
+    final padding = compact ? AppSpacing.xs + 2 : AppSpacing.md;
 
     return Card(
       color: isSelected ? colorScheme.primaryContainer : null,
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         onLongPress: onLongPress,
-        borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: EdgeInsets.all(padding),
           child: Row(
@@ -51,15 +52,24 @@ class NoteCard extends ConsumerWidget {
             children: [
               if (showCheckbox) ...[
                 Padding(
-                  padding: const EdgeInsets.only(top: 2, right: 12),
-                  child: Icon(
-                    isSelected
-                        ? Icons.check_circle
-                        : Icons.radio_button_unchecked,
-                    size: 22,
-                    color: isSelected
-                        ? colorScheme.primary
-                        : colorScheme.outline,
+                  padding: const EdgeInsets.only(top: 2, right: AppSpacing.sm),
+                  child: AnimatedSwitcher(
+                    duration: AppDurations.fast,
+                    transitionBuilder: (child, animation) {
+                      return ScaleTransition(
+                        scale: animation,
+                        child: FadeTransition(
+                            opacity: animation, child: child),
+                      );
+                    },
+                    child: Icon(
+                      isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
+                      key: ValueKey(isSelected),
+                      size: 22,
+                      color: isSelected
+                          ? colorScheme.primary
+                          : colorScheme.outline,
+                    ),
                   ),
                 ),
               ],
@@ -73,20 +83,18 @@ class NoteCard extends ConsumerWidget {
                         Expanded(
                           child: Text(
                             note.title.isEmpty ? '无标题' : note.title,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
+                            style: theme.textTheme.titleMedium,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: AppSpacing.xs),
                         _PriorityDot(priority: note.priority),
                       ],
                     ),
                     // ── 摘要（紧凑模式下隐藏摘要与标签） ──
                     if (!compact && note.content.isNotEmpty) ...[
-                      const SizedBox(height: 8),
+                      const SizedBox(height: AppSpacing.xs),
                       Text(
                         note.excerpt,
                         style: theme.textTheme.bodyMedium?.copyWith(
@@ -97,7 +105,7 @@ class NoteCard extends ConsumerWidget {
                       ),
                     ],
                     // ── 底部信息行 ──
-                    SizedBox(height: compact ? 6 : 12),
+                    SizedBox(height: compact ? AppSpacing.xxs + 2 : AppSpacing.sm),
                     Row(
                       children: [
                         Icon(
@@ -105,7 +113,7 @@ class NoteCard extends ConsumerWidget {
                           size: 14,
                           color: colorScheme.outline,
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: AppSpacing.xxs),
                         Text(
                           dateFormat.format(note.updatedAt),
                           style: theme.textTheme.labelSmall?.copyWith(
@@ -176,14 +184,17 @@ class _TagChips extends StatelessWidget {
         : 0.18;
 
     return Wrap(
-      spacing: 4,
+      spacing: AppSpacing.xxs,
       children: tags.map((tag) {
         final color = colorResolver(tag);
         return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.xs,
+            vertical: 2,
+          ),
           decoration: BoxDecoration(
             color: Color.lerp(color, colorScheme.surface, luminance),
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(AppRadius.sm - 2),
           ),
           child: Text(
             '#$tag',
