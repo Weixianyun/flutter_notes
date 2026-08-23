@@ -27,9 +27,6 @@ class OutlineNode {
   /// 嵌套深度（根级为 0）
   final int depth;
 
-  /// 父节点（仅在构造过程中使用）
-  OutlineNode? _parent;
-
   /// 子节点列表（按文档顺序）
   final List<OutlineNode> children = <OutlineNode>[];
 
@@ -48,7 +45,6 @@ class OutlineNode {
       );
 
   void adopt(OutlineNode child) {
-    child._parent = this;
     children.add(child);
   }
 }

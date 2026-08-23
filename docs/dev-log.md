@@ -1,5 +1,33 @@
 # 开发日志
 
+## 2026-08-23 | Week 8 Day 1-5 — Mermaid / LaTeX / PlantUML 代码块
+
+### 今日完成
+- **Day 1** 语言检测：`DiagramLanguage` 枚举 + `fromCodeFence(info)` 解析 ` ```mermaid/latex/tex/math/katex/plantuml/puml/uml ``` `，含 `isDiagram / displayLabel` 派生属性；新增 `DiagramBlock` 模型（`raw / info / firstLine / lineCount / toString`）。
+- **Day 2** Mermaid 渲染：新增 `MermaidRenderer` 容器（亮/暗主题切换 `MermaidStyle.forest / dark`）+ `MermaidErrorBlock` 降级；`DiagramBlockView` 作为统一调度器；`CodeBlockBuilder` 接入 `DiagramLanguage` 路由。
+- **Day 3** LaTeX/KaTeX：实现 `LatexExtractor`（行内 `$..$` + 块级 `$$..$$`，跳过 `\$` 转义、避免货币误识别）；`InlineLatexProcessor` 把公式替换为占位标记交给 `MarkdownPreview`；`LatexRenderer` 行内/块级双模式，错误时回落到 `_ErrorFallback`。
+- **Day 4** PlantUML：基于 `puml_canvas` 离线渲染 `PlantumlRenderer`（StatefulWidget，自动补全 `@startuml / @enduml` 围栏），外层包 `InteractiveViewer` 支持缩放。
+- **Day 5** 测试与质量：
+  - 新增 `mermaid_renderer_test.dart`（2 + 1 用例）、`plantuml_renderer_test.dart`（3 用例）、`latex_extractor_test.dart`（12 用例）、`inline_latex_processor_test.dart`（6 用例）、`diagram_block_test.dart`（4 用例）、`diagram_language_test.dart`（10 用例）、`diagram_block_view_test.dart`（7 用例）、`code_block_builder_test.dart`（3 用例）；
+  - 修复 `code_block_builder_test` 的 `language-` 注入位置（`code` 子元素而非 `pre`）；
+  - `DiagramBlockView` 空 raw 触发 `_EmptyDiagramHint` 提示，避免 Mermaid 渲染器收到空字符串。
+
+### 文件清单
+- 新增
+  - `lib/features/editor/models/diagram_language.dart`、`diagram_block.dart`
+  - `lib/features/editor/services/latex_extractor.dart`、`inline_latex_processor.dart`
+  - `lib/features/editor/widgets/diagram/diagram_block_view.dart`、`mermaid_renderer.dart`、`latex_renderer.dart`、`plantuml_renderer.dart`
+  - `test/features/editor/diagram_language_test.dart`、`diagram_block_test.dart`、`diagram_block_view_test.dart`
+  - `test/features/editor/code_block_builder_test.dart`、`mermaid_renderer_test.dart`、`plantuml_renderer_test.dart`
+  - `test/features/editor/latex_extractor_test.dart`、`inline_latex_processor_test.dart`
+- 修改
+  - `lib/features/editor/widgets/markdown_preview.dart`：`CodeBlockBuilder` 路由图表语言到 `DiagramBlockView`；样式 token 化
+  - `pubspec.yaml`：新增 `flutter_mermaid`、`flutter_math_fork`、`puml_canvas` 依赖
+
+### 验证
+- `flutter analyze`：No issues found
+- `flutter test`：414/414 passed
+
 ## 2026-08-23 | Week 7 Day 1-5 — 双向链接 + 大纲
 
 ### 今日完成

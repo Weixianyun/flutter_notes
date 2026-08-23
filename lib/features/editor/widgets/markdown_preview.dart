@@ -7,7 +7,10 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:markdown/markdown.dart' as md;
 
 import '../../../core/design/design_tokens.dart';
+import '../models/diagram_block.dart';
+import '../models/diagram_language.dart';
 import '../services/wiki_link_processor.dart';
+import 'diagram/diagram_block_view.dart';
 
 /// Markdown 预览组件
 ///
@@ -27,6 +30,7 @@ class MarkdownPreview extends StatelessWidget {
     this.scrollable = true,
     this.onWikiLinkTap,
     WikiLinkProcessor? processor,
+  // ignore: prefer_initializing_formals
   }) : _processor = processor;
 
   final String data;
@@ -220,6 +224,18 @@ class CodeBlockBuilder extends MarkdownElementBuilder {
     }
 
     final code = element.textContent.trimRight();
+
+    // Week 8：识别图表/数学语言并路由到 DiagramBlockView
+    final lang = DiagramLanguage.fromCodeFence(language);
+    if (lang.isDiagram) {
+      return DiagramBlockView(
+        block: DiagramBlock(
+          language: lang,
+          raw: code,
+          info: language,
+        ),
+      );
+    }
 
     return _CodeBlockWidget(
       code: code,
