@@ -1,5 +1,48 @@
 # 开发日志
 
+## 2026-08-23 | Week 6 Day 1-5 — 同步与冲突解决
+
+### 今日完成
+
+#### 1. 增量同步 (Day 1) — `lib/services/preferences_service.dart` + `lib/services/sync_service.dart`
+- `PreferencesService` 持久化 `lastSyncedAt` (ISO 字符串) 与 `lastSyncedNoteIds` (逗号分隔)
+- `SyncService.pushNotesAfter(since)`：只推送 `updatedAt > since` 的笔记
+- `SyncService.pullNotesSince(since)`：只拉取远端 `updatedAt > since` 的笔记
+- 静态 `SyncService.detectConflicts(local, remote, lastSyncedAt)` 返回 `List<SyncConflictItem>`，纯函数便于单测
+- `SyncConflictItem` 模型封装 local/remote 笔记对，含 `localIsNewer` 辅助属性
+
+#### 2. 断点续传 (Day 2) — `lib/data/models/sync_checkpoint.dart` + `lib/services/checkpoint_store.dart`
+- `SyncCheckpoint` 模型：`id`/`direction`/`stage`/`pendingPushIds`/`pendingPullPaths`/`completedPushIds`/`completedPullPaths`/`pulledRemoteNotes`/`progress`/`hasPendingWork`
+- `CheckpointStore` 抽象 + `SharedPrefsCheckpointStore` 默认实现（基于 `SharedPreferences`，存储 key `sync_checkpoint_v1`）
+- `SyncService.createCheckpoint` 初始化队列；`markPushCompleted` / `markPullCompleted` / `advanceStage` 推进
+- `resumePush` / `resumePull` 逐条恢复（失败时保留 checkpoint，下次 resume 继续）
+- `finalizeCheckpoint` 完成时清空持久化数据
+
+#### 3. 冲突检测增强 (Day 3) — `lib/services/sync_service.dart`
+- `SyncService.computeContentSha(note)` 与 `computeRemoteSha(markdown)`：纯 Dart SHA-1 实现（40 hex chars）
+- `detectConflicts` 新增可选 `lastSyncedRemoteSha` 参数：远端 sha 未变时不算冲突（仅 updatedAt 推进但内容未变）
+- `SyncConflictItem` 新增 `localSha` / `remoteSha` / `onlyTimestampChanged` / `localLeadDuration` 辅助属性
+
+#### 4. 冲突解决 UI (Day 4) — `lib/features/sync/pages/conflict_resolution_page.dart`
+- `ConflictResolutionPage`：每条冲突展示本地/远端并排卡片，标出"更新"标签；每条提供 Local / Remote / Skip 三选一
+- 顶部摘要 + 底部「全部跳过」+「应用解决方案」按钮；空态视图友好提示
+- `SyncState` 新增 `conflicts` / `pendingResolutions` / `hasConflicts` / `unresolvedCount` / `allResolved`
+- `SyncNotifier` 新增 `detectAndStoreConflicts` / `setResolution` / `applyResolutions` / `clearConflicts`
+- `applyResolutions` 按 resolution 写回本地（localWins 推 GitHub，remoteWins 覆盖本地）
+- 路由注册 `/conflict-resolution`；`SyncSettingsPage` 集成"检测冲突"入口（Badge 显示冲突数）
+
+#### 5. 测试 (Day 5) — 5 个新测试文件，43 个新测试
+- `test/services/sync_checkpoint_test.dart` (12 个)：模型序列化、progress、hasPendingWork、copyWith、SharedPrefsCheckpointStore 持久化往返
+- `test/services/sync_sha_test.dart` (15 个)：SHA-1 内容校验、detectConflicts sha 增强、SyncConflictItem 派生属性
+- `test/features/sync/sync_state_test.dart` (5 个)：默认值、hasConflicts、unresolvedCount、allResolved、copyWith
+- `test/features/sync/sync_notifier_test.dart` (7 个)：clearConflicts / setResolution / applyResolutions 三种分支（localWins/remoteWins/push 失败）
+- `test/features/sync/conflict_resolution_page_test.dart` (4 个)：空态、三选项渲染、点击选项、全部跳过
+
+### 测试与质量
+- `flutter analyze`：0 issues
+- `flutter test`：313/313 通过（+43 新增）
+- 16 个新文件（8 业务 + 5 测试 + 3 修改）
+
 ## 2026-08-23 | Week 5 Day 2-4 — 动画系统延伸：Hero + Page transition + 开发者选项
 
 ### 今日完成

@@ -179,6 +179,47 @@ class _SyncSettingsPageState extends ConsumerState<SyncSettingsPage> {
                 syncState.status != SyncStatus.syncing,
             onTap: () => ref.read(syncProvider.notifier).importNotes(),
           ),
+          ListTile(
+            leading: syncState.status == SyncStatus.syncing
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Badge(
+                    isLabelVisible: syncState.hasConflicts,
+                    label: Text('${syncState.conflicts.length}'),
+                    child: const Icon(Icons.compare_arrows),
+                  ),
+            title: const Text('检测冲突'),
+            subtitle: Text(
+              syncState.hasConflicts
+                  ? '${syncState.conflicts.length} 条冲突待解决'
+                  : '比较本地与远端差异',
+            ),
+            enabled: syncState.user != null &&
+                syncState.status != SyncStatus.syncing,
+            onTap: () async {
+              final count = await ref
+                  .read(syncProvider.notifier)
+                  .detectAndStoreConflicts();
+              if (!context.mounted) return;
+              if (count == 0) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('没有发现冲突')),
+                );
+                return;
+              }
+              context.push('/conflict-resolution');
+            },
+          ),
+          if (syncState.hasConflicts)
+            ListTile(
+              leading: const Icon(Icons.warning_amber, color: Colors.orange),
+              title: Text('${syncState.conflicts.length} 条冲突待处理'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push('/conflict-resolution'),
+            ),
           const SizedBox(height: 32),
         ],
       ),

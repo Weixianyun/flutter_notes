@@ -15,6 +15,8 @@ class SyncState {
     this.user,
     this.lastSyncTime,
     this.message,
+    this.conflicts = const <SyncConflictItem>[],
+    this.pendingResolutions = const <String, ConflictResolution>{},
   });
 
   final SyncStatus status;
@@ -22,17 +24,36 @@ class SyncState {
   final DateTime? lastSyncTime;
   final String? message;
 
+  /// 当前检测到的冲突列表
+  final List<SyncConflictItem> conflicts;
+
+  /// 用户对每条冲突已做的选择（noteId -> resolution）
+  final Map<String, ConflictResolution> pendingResolutions;
+
+  bool get hasConflicts => conflicts.isNotEmpty;
+
+  int get unresolvedCount =>
+      conflicts.where((c) => !pendingResolutions.containsKey(c.noteId)).length;
+
+  bool get allResolved =>
+      conflicts.isNotEmpty && unresolvedCount == 0;
+
   SyncState copyWith({
     SyncStatus? status,
     GitHubUser? user,
     DateTime? lastSyncTime,
     String? message,
+    List<SyncConflictItem>? conflicts,
+    Map<String, ConflictResolution>? pendingResolutions,
   }) {
     return SyncState(
       status: status ?? this.status,
       user: user ?? this.user,
       lastSyncTime: lastSyncTime ?? this.lastSyncTime,
       message: message ?? this.message,
+      conflicts: conflicts ?? this.conflicts,
+      pendingResolutions:
+          pendingResolutions ?? this.pendingResolutions,
     );
   }
 }
@@ -217,6 +238,176 @@ class SyncNotifier extends StateNotifier<SyncState> {
         message: '导入失败: $e',
       );
     }
+  }
+
+  /// 检测并填充冲突列表
+  ///
+  /// - 拉取远端笔记
+  /// - 读取本地 lastSyncedAt
+  /// - 调用 [SyncService.detectConflicts] 得到冲突项
+  /// - 把冲突放进 state，UI 可导航到冲突解决页
+  ///
+  /// 返回检测到的冲突数量。
+  Future<int> detectAndStoreConflicts() async {
+    final syncService = _ref.read(syncServiceProvider);
+    if (syncService == null) {
+      state = state.copyWith(
+        status: SyncStatus.error,
+        message: '未登录 GitHub',
+      );
+      return 0;
+    }
+    final prefs = _ref.read(preferencesServiceProvider);
+    final owner = prefs.getSyncRepoOwner();
+    final repo = prefs.getSyncRepoName();
+    if (owner == null || repo == null) {
+      state = state.copyWith(
+        status: SyncStatus.error,
+        message: '未配置同步仓库',
+      );
+      return 0;
+    }
+
+    state = state.copyWith(
+      status: SyncStatus.syncing,
+      message: '正在检测冲突...',
+    );
+
+    try {
+      final notesAsync = _ref.read(notesProvider);
+      final localNotes = notesAsync.maybeWhen(
+        data: (n) => n,
+        orElse: () => <NoteModel>[],
+      );
+      final remoteNotes = await syncService.pullNotes(
+        owner: owner,
+        repo: repo,
+      );
+      final lastSyncedAt = prefs.getLastSyncedAt();
+      final conflicts = SyncService.detectConflicts(
+        localNotes: localNotes,
+        remoteNotes: remoteNotes,
+        lastSyncedAt: lastSyncedAt,
+      );
+      state = state.copyWith(
+        status: conflicts.isEmpty ? SyncStatus.success : SyncStatus.idle,
+        message: conflicts.isEmpty
+            ? '没有发现冲突'
+            : '检测到 ${conflicts.length} 条冲突，请逐条选择保留版本',
+        conflicts: conflicts,
+        pendingResolutions: const <String, ConflictResolution>{},
+      );
+      return conflicts.length;
+    } catch (e) {
+      state = state.copyWith(
+        status: SyncStatus.error,
+        message: '冲突检测失败: $e',
+      );
+      return 0;
+    }
+  }
+
+  /// 对单条冲突设置解决方案
+  void setResolution(String noteId, ConflictResolution resolution) {
+    final next = Map<String, ConflictResolution>.from(state.pendingResolutions);
+    if (resolution == ConflictResolution.skip) {
+      next.remove(noteId);
+    } else {
+      next[noteId] = resolution;
+    }
+    state = state.copyWith(pendingResolutions: next);
+  }
+
+  /// 应用所有已解决的冲突
+  ///
+  /// - localWins → 写回本地后推送到 GitHub
+  /// - remoteWins → 写回本地（覆盖本地版本）
+  /// - skip → 不处理
+  ///
+  /// 返回处理结果摘要。完成后清空 conflicts。
+  Future<({int localWins, int remoteWins, int skipped, List<String> errors})>
+      applyResolutions() async {
+    final syncService = _ref.read(syncServiceProvider);
+    final prefs = _ref.read(preferencesServiceProvider);
+    final owner = prefs.getSyncRepoOwner();
+    final repo = prefs.getSyncRepoName();
+    if (syncService == null || owner == null || repo == null) {
+      state = state.copyWith(
+        status: SyncStatus.error,
+        message: '未登录或未配置仓库，无法应用冲突解决',
+      );
+      return (localWins: 0, remoteWins: 0, skipped: 0, errors: <String>[]);
+    }
+    if (state.pendingResolutions.isEmpty) {
+      state = state.copyWith(
+        status: SyncStatus.success,
+        message: '没有已解决的冲突',
+      );
+      return (localWins: 0, remoteWins: 0, skipped: 0, errors: <String>[]);
+    }
+
+    state = state.copyWith(
+      status: SyncStatus.syncing,
+      message: '正在应用冲突解决...',
+    );
+
+    final repo_ = _ref.read(noteRepositoryProvider);
+    int localWins = 0;
+    int remoteWins = 0;
+    final skipped = state.conflicts.length - state.pendingResolutions.length;
+    final errors = <String>[];
+
+    for (final entry in state.pendingResolutions.entries) {
+      final conflict = state.conflicts.firstWhere(
+        (c) => c.noteId == entry.key,
+        orElse: () => state.conflicts.first,
+      );
+      try {
+        switch (entry.value) {
+          case ConflictResolution.localWins:
+            await repo_.updateNote(conflict.local);
+            await syncService.pushNote(
+              owner: owner,
+              repo: repo,
+              note: conflict.local,
+            );
+            localWins++;
+          case ConflictResolution.remoteWins:
+            await repo_.updateNote(conflict.remote);
+            remoteWins++;
+          case ConflictResolution.skip:
+            // skip 不在 pendingResolutions 中，无需处理
+            break;
+        }
+      } catch (e) {
+        errors.add('${conflict.title}: $e');
+      }
+    }
+
+    state = state.copyWith(
+      status: errors.isEmpty ? SyncStatus.success : SyncStatus.error,
+      message: errors.isEmpty
+          ? '冲突解决完成: 本地 $localWins 条, 远端 $remoteWins 条, 跳过 $skipped 条'
+          : '冲突解决出错: ${errors.join("; ")}',
+      conflicts: const <SyncConflictItem>[],
+      pendingResolutions: const <String, ConflictResolution>{},
+      lastSyncTime: DateTime.now(),
+    );
+    return (
+      localWins: localWins,
+      remoteWins: remoteWins,
+      skipped: skipped,
+      errors: errors,
+    );
+  }
+
+  /// 清空冲突状态（用户主动放弃）
+  void clearConflicts() {
+    state = state.copyWith(
+      conflicts: const <SyncConflictItem>[],
+      pendingResolutions: const <String, ConflictResolution>{},
+      message: '已取消冲突解决',
+    );
   }
 
   /// 设置同步仓库

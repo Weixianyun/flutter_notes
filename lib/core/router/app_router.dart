@@ -10,6 +10,7 @@ import '../../features/search/pages/search_page.dart';
 import '../../features/settings/pages/developer_options_page.dart';
 import '../../features/settings/pages/performance_page.dart';
 import '../../features/settings/pages/settings_page.dart';
+import '../../features/sync/pages/conflict_resolution_page.dart';
 import '../../features/sync/pages/github_login_page.dart';
 import '../../features/sync/pages/sync_settings_page.dart';
 import '../design/app_page_transitions.dart';
@@ -88,6 +89,10 @@ class AppRouter {
           GoRoute(
             path: syncSettings,
             builder: (context, state) => const SyncSettingsPage(),
+          ),
+          GoRoute(
+            path: '/conflict-resolution',
+            builder: (context, state) => const ConflictResolutionPage(),
           ),
           GoRoute(
             path: trash,

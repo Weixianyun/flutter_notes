@@ -21,6 +21,8 @@ class PreferencesService {
   static const _syncRepoOwnerKey = 'sync_repo_owner';
   static const _syncRepoNameKey = 'sync_repo_name';
   static const _localeCodeKey = 'locale_code';
+  static const _lastSyncedAtKey = 'sync_last_synced_at';
+  static const _lastSyncedNoteIdsKey = 'sync_last_synced_note_ids';
 
   // ── 主题模式 ──
 
@@ -138,5 +140,39 @@ class PreferencesService {
     } else {
       await _prefs.setString(_localeCodeKey, code);
     }
+  }
+
+  // ── 增量同步元数据 ──
+
+  /// 上次同步完成时间（null = 从未同步）
+  DateTime? getLastSyncedAt() {
+    final iso = _prefs.getString(_lastSyncedAtKey);
+    if (iso == null) return null;
+    return DateTime.tryParse(iso);
+  }
+
+  /// 设置上次同步完成时间
+  Future<void> setLastSyncedAt(DateTime at) {
+    return _prefs.setString(_lastSyncedAtKey, at.toIso8601String());
+  }
+
+  /// 上次同步涉及的笔记 ID 集合（用于差异比对）
+  ///
+  /// 用逗号拼接存储。单笔记 ID 内不含逗号，安全。
+  Set<String> getLastSyncedNoteIds() {
+    final raw = _prefs.getString(_lastSyncedNoteIdsKey);
+    if (raw == null || raw.isEmpty) return <String>{};
+    return raw.split(',').where((s) => s.isNotEmpty).toSet();
+  }
+
+  /// 设置上次同步涉及的笔记 ID 集合
+  Future<void> setLastSyncedNoteIds(Set<String> ids) {
+    return _prefs.setString(_lastSyncedNoteIdsKey, ids.join(','));
+  }
+
+  /// 清除增量同步元数据
+  Future<void> clearSyncMetadata() async {
+    await _prefs.remove(_lastSyncedAtKey);
+    await _prefs.remove(_lastSyncedNoteIdsKey);
   }
 }
