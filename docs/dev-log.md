@@ -1,5 +1,43 @@
 # 开发日志
 
+## 2026-08-23 | Week 9 Day 1-5 — 附件 / 图片管理 (file_picker v11)
+
+### 今日完成
+- **Day 1** 依赖升级：解除 `file_picker` 的 `v11.0.3` 注释（解决 Week 2 推迟的 AGP 9.0 兼容问题），新增 `image_picker ^1.1.2` / `photo_view ^0.15.0` / `image ^4.5.4` / `mime ^2.0.0`，为图片/附件功能建立依赖基础。
+- **Day 2** 附件模型与存储：新增 `Attachment` 模型（含 `AttachmentKind` 枚举：image/file/audio/video/other），`AttachmentStorage` 抽象 + `LocalAttachmentStorage`（基于 `path_provider`）/ `MemoryAttachmentStorage` 两种实现，统一通过 SHA-256 流式去重（`crypto` + 自实现 `_HexSink`）；`AttachmentRepository` 抽象 + `InMemoryAttachmentRepository` / `SharedPrefsAttachmentRepository`（JSON 编码）；`AttachmentService` 业务门面。
+- **Day 3** 缩略图服务：`ThumbnailService` 抽象 + `LocalThumbnailService`（基于 `image` 包 JPEG/PNG/GIF/BMP/WebP 编码，按 `maxWidth/maxHeight` 比例缩放）+ `MemoryThumbnailService`（测试用）；缓存文件名 `<sha>-<spec_key>.<ext>`，目录 `getApplicationDocumentsDirectory/thumbnails/`；支持 `listAll / clearAll` 回收。
+- **Day 4** UI 集成：
+  - `AttachmentRefParser` 解析 `attachment://<id>?name=foo.png` 引用，支持 `extractAll / insert / fileNameFromSrc`；
+  - `AttachmentPicker` 抽象 + `FilePickerAttachmentPicker`（file_picker v11 的 `FilePicker.pickFiles` 静态 API）+ `showAttachmentPickerSheet` 底部菜单；
+  - `AttachmentGrid`（Riverpod `noteAttachmentsProvider` + `_thumbnailFileProvider` FutureProvider family）显示笔记附件；
+  - `AttachmentInserter` 在编辑器光标处插入附件 Markdown 引用；
+  - `MarkdownPreview` 新增 `onAttachmentTap` 回调，并把链接分发抽到顶层 `handleLinkTap` 纯函数（便于测试）；非 wiki/attachment 链接保留原剪贴板行为。
+- **Day 5** 测试与质量：
+  - 新增 `attachment_test.dart`（12 用例）、`attachment_storage_test.dart`（7 用例）、`attachment_repository_test.dart`（7 用例）、`attachment_ref_test.dart`（10 用例）、`thumbnail_service_test.dart`（4 用例）、`markdown_preview_attachment_test.dart`（5 用例）；
+  - 修复 `SharedPrefsAttachmentRepository._encode` 之前用 `toString()` 拆 `|` 的脆弱编码，改用 `jsonEncode / jsonDecode`；
+  - 修复 `AttachmentRefParser.extractAll` 的 group 索引错位；
+  - 抽 `handleLinkTap` 为顶层纯函数，避免 widget 测试对 State 的依赖。
+
+### 文件清单
+- 新增
+  - `lib/data/models/attachment.dart`
+  - `lib/services/attachment_storage.dart`、`attachment_repository.dart`、`thumbnail_service.dart`
+  - `lib/features/attachments/models/attachment_ref.dart`
+  - `lib/features/attachments/providers/attachment_providers.dart`
+  - `lib/features/attachments/widgets/attachment_picker_sheet.dart`、`attachment_grid.dart`、`attachment_inserter.dart`
+  - `test/data/attachment_test.dart`
+  - `test/services/attachment_storage_test.dart`、`attachment_repository_test.dart`、`thumbnail_service_test.dart`
+  - `test/features/attachments/attachment_ref_test.dart`
+  - `test/features/editor/markdown_preview_attachment_test.dart`
+- 修改
+  - `pubspec.yaml`：启用 `file_picker ^11.0.3`，新增 `image_picker` / `photo_view` / `image` / `mime`
+  - `lib/features/editor/widgets/markdown_preview.dart`：新增 `onAttachmentTap` + `handleLinkTap` 纯函数
+  - `pubspec.lock`：依赖解析
+
+### 验证
+- `flutter analyze`：No issues found
+- `flutter test`：464/464 passed
+
 ## 2026-08-23 | Week 8 Day 1-5 — Mermaid / LaTeX / PlantUML 代码块
 
 ### 今日完成

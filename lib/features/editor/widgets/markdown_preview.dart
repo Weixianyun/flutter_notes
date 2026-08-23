@@ -29,6 +29,7 @@ class MarkdownPreview extends StatelessWidget {
     required this.data,
     this.scrollable = true,
     this.onWikiLinkTap,
+    this.onAttachmentTap,
     WikiLinkProcessor? processor,
   // ignore: prefer_initializing_formals
   }) : _processor = processor;
@@ -38,6 +39,12 @@ class MarkdownPreview extends StatelessWidget {
 
   /// 用户点击 wiki-link 时的回调，参数为目标笔记标题与可选 heading
   final void Function(String target, String? heading)? onWikiLinkTap;
+
+  /// 用户点击附件链接（`attachment://<id>`）的回调
+  ///
+  /// Markdown 预览会优先把 `attachment://<id>` 解析为本地文件并展示；
+  /// 点击时（如查看大图、打开文件）会触发本回调。
+  final void Function(String attachmentId, String? name)? onAttachmentTap;
 
   final WikiLinkProcessor? _processor;
 
@@ -178,16 +185,49 @@ class MarkdownPreview extends StatelessWidget {
 
   void _onTapLink(String text, String? href, String title) {
     if (href == null) return;
-    if (href.startsWith('#wiki:')) {
-      final target = WikiLinkProcessor.extractTarget(href);
-      final heading = WikiLinkProcessor.extractHeading(href);
-      if (target != null) {
-        onWikiLinkTap?.call(target, heading);
-      }
-      return;
+    final handled = handleLinkTap(
+      href: href,
+      onWikiLinkTap: onWikiLinkTap,
+      onAttachmentTap: onAttachmentTap,
+    );
+    if (!handled) {
+      // 普通外链：复制到剪贴板
+      Clipboard.setData(ClipboardData(text: href));
     }
-    Clipboard.setData(ClipboardData(text: href));
   }
+}
+
+/// 处理 markdown 链接点击的纯函数（便于测试）
+///
+/// 返回 `true` 表示已经交给 [onWikiLinkTap] / [onAttachmentTap] 处理；
+/// 返回 `false` 表示调用方可以走默认行为（如复制到剪贴板）。
+bool handleLinkTap({
+  required String? href,
+  required void Function(String target, String? heading)? onWikiLinkTap,
+  required void Function(String attachmentId, String? name)? onAttachmentTap,
+}) {
+  if (href == null) return false;
+  if (href.startsWith('#wiki:')) {
+    final target = WikiLinkProcessor.extractTarget(href);
+    final heading = WikiLinkProcessor.extractHeading(href);
+    if (target != null) {
+      onWikiLinkTap?.call(target, heading);
+    }
+    return true;
+  }
+  if (href.startsWith('attachment://')) {
+    final uri = Uri.tryParse(href);
+    final id = uri == null ? '' : (uri.path.isNotEmpty ? uri.path : uri.host);
+    final name = uri?.queryParameters['name'];
+    if (id.isNotEmpty) {
+      onAttachmentTap?.call(
+        Uri.decodeComponent(id),
+        name == null ? null : Uri.decodeComponent(name),
+      );
+    }
+    return true;
+  }
+  return false;
 }
 
 /// 代码块构建器
