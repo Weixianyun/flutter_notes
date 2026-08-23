@@ -7,21 +7,35 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:markdown/markdown.dart' as md;
 
 import '../../../core/design/design_tokens.dart';
+import '../services/wiki_link_processor.dart';
 
 /// Markdown 预览组件
 ///
 /// 使用 flutter_markdown 渲染 Markdown 内容，
 /// 支持 GitHub Flavored Markdown：表格、任务列表、删除线、代码块语法高亮。
 /// 自动适配当前主题的明暗模式。
+///
+/// ## Wiki-Link 支持
+/// 输入文本中的 `[[Target]]`、`[[Target#Heading]]`、`[[Target|Alias]]` 会被预处理
+/// 替换为指向 `#wiki:Target` 的 markdown 链接，组件通过 [onWikiLinkTap] 回调
+/// 把点击事件转发给业务层处理（导航到对应笔记）。未设置 [onWikiLinkTap] 时，
+/// wiki-link 与普通文本一样不可点击。
 class MarkdownPreview extends StatelessWidget {
   const MarkdownPreview({
     super.key,
     required this.data,
     this.scrollable = true,
-  });
+    this.onWikiLinkTap,
+    WikiLinkProcessor? processor,
+  }) : _processor = processor;
 
   final String data;
   final bool scrollable;
+
+  /// 用户点击 wiki-link 时的回调，参数为目标笔记标题与可选 heading
+  final void Function(String target, String? heading)? onWikiLinkTap;
+
+  final WikiLinkProcessor? _processor;
 
   @override
   Widget build(BuildContext context) {
@@ -117,15 +131,18 @@ class MarkdownPreview extends StatelessWidget {
       ),
     };
 
+    final processedData =
+        (_processor ?? const WikiLinkProcessor()).process(data);
+
     if (scrollable) {
       return Markdown(
-        data: data,
+        data: processedData,
         styleSheet: styleSheet,
         padding: const EdgeInsets.all(AppSpacing.md),
         selectable: true,
         extensionSet: md.ExtensionSet.gitHubWeb,
         builders: builders,
-        onTapLink: _onTapLink,
+        onTapLink: (text, href, title) => _onTapLink(text, href, title),
         checkboxBuilder: (checked) => Padding(
           padding: const EdgeInsets.only(right: AppSpacing.xxs),
           child: Icon(
@@ -138,12 +155,12 @@ class MarkdownPreview extends StatelessWidget {
     }
 
     return MarkdownBody(
-      data: data,
+      data: processedData,
       styleSheet: styleSheet,
       selectable: true,
       extensionSet: md.ExtensionSet.gitHubWeb,
       builders: builders,
-      onTapLink: _onTapLink,
+      onTapLink: (text, href, title) => _onTapLink(text, href, title),
       checkboxBuilder: (checked) => Padding(
         padding: const EdgeInsets.only(right: AppSpacing.xxs),
         child: Icon(
@@ -157,6 +174,14 @@ class MarkdownPreview extends StatelessWidget {
 
   void _onTapLink(String text, String? href, String title) {
     if (href == null) return;
+    if (href.startsWith('#wiki:')) {
+      final target = WikiLinkProcessor.extractTarget(href);
+      final heading = WikiLinkProcessor.extractHeading(href);
+      if (target != null) {
+        onWikiLinkTap?.call(target, heading);
+      }
+      return;
+    }
     Clipboard.setData(ClipboardData(text: href));
   }
 }

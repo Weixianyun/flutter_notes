@@ -12,7 +12,10 @@ import '../../../services/service_providers.dart';
 import '../../notes/providers/notes_provider.dart';
 import '../../settings/providers/settings_provider.dart';
 import '../providers/autosave_provider.dart';
+import '../providers/backlink_index_provider.dart';
 import '../providers/editor_provider.dart';
+import '../services/backlink_index.dart';
+import '../widgets/editor_sidebar.dart';
 import '../widgets/markdown_preview.dart';
 
 /// 笔记编辑器页面
@@ -48,6 +51,9 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
   bool _isSaved = false;
   bool _isLoading = false;
   bool _isSaving = false;
+
+  /// 侧栏（大纲 + 反向链接）是否展开
+  bool _showSidebar = false;
 
   /// 自动保存防抖定时器
   Timer? _autosaveTimer;
@@ -234,6 +240,14 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
               : Text(_isEditing ? l10n.editorTitleEdit : l10n.editorTitleNew),
           actions: [
             IconButton(
+              icon: Icon(_showSidebar
+                  ? Icons.menu_open
+                  : Icons.menu),
+              tooltip: _showSidebar ? '隐藏大纲/反向链接' : '显示大纲/反向链接',
+              onPressed: () =>
+                  setState(() => _showSidebar = !_showSidebar),
+            ),
+            IconButton(
               icon: Icon(effectivePreview ? Icons.edit : Icons.preview),
               tooltip: effectivePreview ? l10n.editTooltip : l10n.previewTooltip,
               onPressed: () {
@@ -261,7 +275,20 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
                 )
               : null,
         ),
-        body: effectivePreview ? _buildPreview() : _buildEditor(colorScheme),
+        body: Row(
+          children: [
+            Expanded(
+              child: effectivePreview
+                  ? _buildPreview()
+                  : _buildEditor(colorScheme),
+            ),
+            if (_showSidebar)
+              SizedBox(
+                width: 280,
+                child: _buildSidebar(),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -369,8 +396,157 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
         MarkdownPreview(
           data: content.isEmpty ? '*暂无内容*' : content,
           scrollable: false,
+          onWikiLinkTap: _onWikiLinkTap,
         ),
       ],
+    );
+  }
+
+  // ── 侧栏（大纲 + 反向链接）──
+
+  Widget _buildSidebar() {
+    final index = ref.watch(backlinkIndexProvider);
+    final content = _contentController.text;
+    final targetTitle = _titleController.text.trim();
+
+    return EditorSidebar(
+      content: content,
+      targetTitle: targetTitle,
+      index: index,
+      onJumpToOffset: _onJumpToOffset,
+      onOpenSource: _onOpenSource,
+    );
+  }
+
+  /// 处理 wiki-link 点击：按目标标题查找笔记并跳转
+  ///
+  /// - 找到唯一匹配：替换当前编辑器内容（切到目标笔记）
+  /// - 找到多个匹配：提示用户选择
+  /// - 未找到：提示用户新建
+  Future<void> _onWikiLinkTap(String target, String? heading) async {
+    final notes = ref.read(notesProvider).value ?? const <NoteModel>[];
+    final lowerTarget = target.trim().toLowerCase();
+
+    final matches = notes
+        .where((n) => n.title.trim().toLowerCase() == lowerTarget)
+        .toList();
+
+    if (matches.isEmpty) {
+      final shouldCreate = await _showCreateFromLinkDialog(target);
+      if (shouldCreate == true && mounted) {
+        await _createNoteFromLink(target, heading);
+      }
+      return;
+    }
+
+    if (matches.length > 1) {
+      final picked = await _showPickNoteDialog(matches);
+      if (picked != null && mounted) {
+        await _openNoteById(picked, heading);
+      }
+      return;
+    }
+
+    await _openNoteById(matches.first.id, heading);
+  }
+
+  /// 跳转到目标笔记的某 heading 行（编辑模式定位光标，预览模式滚动）
+  void _onJumpToOffset(int offset) {
+    if (offset < 0 || offset > _contentController.text.length) return;
+
+    // 切到编辑模式以便定位光标可见
+    if (ref.read(previewModeProvider)) {
+      ref.read(previewModeProvider.notifier).state = false;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _contentController.selection = TextSelection.collapsed(offset: offset);
+    });
+  }
+
+  /// 打开反向链接源笔记
+  Future<void> _onOpenSource(BacklinkEntry entry) async {
+    await _openNoteById(entry.sourceNoteId, entry.link.heading);
+  }
+
+  /// 通过 ID 打开已有笔记
+  Future<void> _openNoteById(String id, String? heading) async {
+    // 当前笔记有未保存改动：自动保存
+    if (_isEditing && _hasChanges) {
+      await _save();
+    }
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => NoteEditorPage(noteId: id, highlight: heading),
+      ),
+    );
+  }
+
+  /// 询问用户是否根据 wiki-link 创建新笔记
+  Future<bool?> _showCreateFromLinkDialog(String target) {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('笔记未找到'),
+        content: Text('未找到标题为 "$target" 的笔记。\n是否新建？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('新建'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 当标题匹配到多条笔记时让用户选择
+  Future<String?> _showPickNoteDialog(List<NoteModel> notes) {
+    return showDialog<String>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('选择笔记'),
+        children: notes
+            .map(
+              (n) => SimpleDialogOption(
+                onPressed: () => Navigator.pop(context, n.id),
+                child: Text(
+                  n.title.isEmpty ? '(无标题)' : n.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            )
+            .toList(),
+      ),
+    );
+  }
+
+  /// 根据 wiki-link 内容创建新笔记（带空 heading 锚点）
+  Future<void> _createNoteFromLink(String target, String? heading) async {
+    final initialContent = heading == null || heading.isEmpty
+        ? ''
+        : '# $heading\n\n';
+
+    final note = NoteModel(
+      title: target,
+      content: initialContent,
+      priority: ref.read(defaultPriorityProvider),
+    );
+
+    await ref.read(notesProvider.notifier).addNote(note);
+    if (!mounted) return;
+
+    // 切到新建出的笔记（addNote 后 id 已分配）
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => NoteEditorPage(noteId: note.id),
+      ),
     );
   }
 

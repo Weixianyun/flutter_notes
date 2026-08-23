@@ -1,5 +1,39 @@
 # 开发日志
 
+## 2026-08-23 | Week 7 Day 1-5 — 双向链接 + 大纲
+
+### 今日完成
+- **Day 1** WikiLink 解析：实现 `WikiLink` 模型与 `WikiLinkParser`，支持 `[[X]]` / `[[X|alias]]` / `[[X#Heading]]` / `[[X#Heading|alias]]` 四种语法，按字符偏移定位。
+- **Day 2** 反向链接：`BacklinkIndex` 在笔记集合上构建 `target → [BacklinkEntry]` 索引；提供 `findBacklinks / hasBacklinks / rebuild / noteCount` API。
+- **Day 3** 大纲：`OutlineService` 从 Markdown 中抽取 `^#{1,6}` heading，构建嵌套 `OutlineNode` 树并支持 `flatten / count`。
+- **Day 4** UI 集成：
+  - 新增 `EditorSidebar`（Tab：大纲 / 反向）并嵌入编辑器右侧栏；
+  - `MarkdownPreview` 集成 `WikiLinkProcessor`，点击 `[[X]]` 通过 `onWikiLinkTap(target, heading)` 回调；
+  - 新增 `backlinkIndexProvider`（同步）和 `backlinkIndexReadyProvider`（异步），`NoteEditorPage` 实现按标题查找/新建笔记 + 跳转。
+- **Day 5** 测试与质量：
+  - 新增 `editor_sidebar_test.dart`（6 用例）、`backlink_index_provider_test.dart`（2 用例）；
+  - 扩展 `markdown_preview_test.dart` wiki-link 集成用例（2 个）；
+  - `WikiLinkProcessor` 现在对 `target / heading` 做 URL 解码（`extractTarget / extractHeading`）；
+  - `BacklinksPanel` 重构：移除 `ListView.separated`，改用 `ListView.builder` + 包裹 `Material` 解决 `ListTile` 在 `DecoratedBox` 中的 ink splash 警告。
+
+### 文件清单
+- 新增
+  - `lib/data/models/wiki_link.dart`、`lib/data/models/outline_node.dart`
+  - `lib/features/editor/services/wiki_link_parser.dart`、`wiki_link_processor.dart`
+  - `lib/features/editor/services/backlink_index.dart`、`outline_service.dart`
+  - `lib/features/editor/widgets/outline_panel.dart`、`backlinks_panel.dart`、`editor_sidebar.dart`
+  - `lib/features/editor/providers/backlink_index_provider.dart`
+  - `test/features/editor/wiki_link_parser_test.dart`、`backlink_index_test.dart`、`outline_service_test.dart`
+  - `test/features/editor/editor_sidebar_test.dart`、`backlink_index_provider_test.dart`
+- 修改
+  - `lib/features/editor/pages/note_editor_page.dart`：侧栏开关 + 跳转回调 + picker dialog + 创建流程
+  - `lib/features/editor/widgets/markdown_preview.dart`：接入 `WikiLinkProcessor` 与 `onWikiLinkTap`
+  - `lib/features/editor/widgets/backlinks_panel.dart`：避免 `DecoratedBox` 包裹 `ListTile`
+
+### 验证
+- `flutter analyze`：2 issues（pre-existing warning/info，0 errors）
+- `flutter test`：370/370 passed
+
 ## 2026-08-23 | Week 6 Day 1-5 — 同步与冲突解决
 
 ### 今日完成

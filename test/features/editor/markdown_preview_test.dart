@@ -44,4 +44,68 @@ void main() {
       expect(AppLineHeights.body, 1.5);
     });
   });
+
+  group('MarkdownPreview - wiki-link 集成', () {
+    testWidgets('点击 [[X]] 触发 onWikiLinkTap，参数为 X 与 null heading',
+        (tester) async {
+      String? capturedTarget;
+      String? capturedHeading;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MarkdownPreview(
+              data: 'see [[Target Note]] here',
+              onWikiLinkTap: (target, heading) {
+                capturedTarget = target;
+                capturedHeading = heading;
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 链接被渲染为可点击文本
+      expect(find.textContaining('Target Note'), findsOneWidget);
+      await tester.tap(find.textContaining('Target Note'));
+      await tester.pump();
+
+      expect(capturedTarget, 'Target Note');
+      expect(capturedHeading, isNull);
+    });
+
+    testWidgets('点击 [[X#Heading|alias]] 触发回调，heading=Heading', (tester) async {
+      String? capturedTarget;
+      String? capturedHeading;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 800,
+              child: MarkdownPreview(
+                data: 'jump to [[TargetNote#Sec1|displayAlias]]',
+                onWikiLinkTap: (target, heading) {
+                  capturedTarget = target;
+                  capturedHeading = heading;
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('displayAlias'), findsOneWidget);
+      // 确保 hit-test 命中 link text（finder 限定在 Markdown widget 树内）
+      final linkFinder = find.textContaining('displayAlias');
+      expect(linkFinder, findsOneWidget);
+      await tester.tap(linkFinder.first, warnIfMissed: false);
+      await tester.pump();
+
+      expect(capturedTarget, 'TargetNote');
+      expect(capturedHeading, 'Sec1');
+    });
+  });
 }
