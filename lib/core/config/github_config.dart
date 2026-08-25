@@ -10,10 +10,10 @@ class GitHubConfig {
   GitHubConfig._();
 
   /// OAuth App Client ID
-  static const String clientId = 'Ov23li-placeholder-replace-me';
+  static const String clientId = 'Ov23ligDscp7gGHqgb8n';
 
   /// OAuth App Client Secret
-  static const String clientSecret = 'placeholder-replace-me';
+  static const String clientSecret = '23e748f179453d7cc1ac40f27487d843117f02c5';
 
   /// 授权回调地址（WebView 中拦截，不实际加载）
   static const String redirectUri = 'http://localhost:8080/callback';
